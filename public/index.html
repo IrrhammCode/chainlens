@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<!--
+    Tatum ChainLens - Main Web Interface
+    Built for Tatum MCP Hackathon 2025
+    
+    Features:
+    - Multi-wallet balance checking across 6+ blockchains
+    - DeFi portfolio tracking and analysis
+    - NFT gallery with collection insights
+    - Analytics dashboard with real-time data
+    - AI chat with MCP server integration
+    - Professional dark theme UI
+    - Mobile-responsive design
+    
+    @author Tatum ChainLens Team
+    @version 1.0.0
+    @license MIT
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> ChainLens - Blockchain Analytics Platform</title>
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-eye"></i>
+                <h1>ChainLens</h1>
+                <span class="badge">Blockchain Analytics Platform</span>
+            </div>
+            <div class="status">
+                <div class="status-item">
+                    <i class="fas fa-circle status-dot"></i>
+                    <span id="connectionStatus">API Connected</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-robot" id="mcpIcon"></i>
+                    <span id="mcpStatus">MCP: Checking...</span>
+                </div>
+                <div class="status-item api-key-section">
+                    <i class="fas fa-key"></i>
+                    <span id="apiKeyDisplay">API Key: Not Set</span>
+                    <button id="changeApiKey" class="btn-change-key">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-btn active" data-tab="wallet">
+                <i class="fas fa-wallet"></i>
+                Multi-Wallet Checker
+            </button>
+            <button class="nav-btn" data-tab="defi">
+                <i class="fas fa-chart-line"></i>
+                DeFi Portfolio
+            </button>
+            <button class="nav-btn" data-tab="ai">
+                <i class="fas fa-robot"></i>
+                AI Assistant
+            </button>
+            <button class="nav-btn" data-tab="nft">
+                <i class="fas fa-image"></i>
+                NFT Gallery
+            </button>
+            <button class="nav-btn" data-tab="analytics">
+                <i class="fas fa-chart-bar"></i>
+                Analytics
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Multi-Wallet Checker Tab -->
+            <div class="tab-content active" id="wallet">
+                <div class="section">
+                    <h2><i class="fas fa-wallet"></i> Multi-Wallet Checker</h2>
+                    <p>Check balances across multiple blockchains simultaneously</p>
+                    
+                    <div class="wallet-input">
+                        <input type="text" id="walletAddress" placeholder="Enter wallet address (0x...)" />
+                        <button id="checkWallet" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Check Wallets
+                        </button>
+                    </div>
+
+                    <div class="chains-grid" id="chainsGrid">
+                        <!-- Chains will be loaded dynamically -->
+                    </div>
+
+                    <div class="wallet-results" id="walletResults">
+                        <!-- Results will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- DeFi Portfolio Tab -->
+            <div class="tab-content" id="defi">
+                <div class="section">
+                    <h2><i class="fas fa-chart-line"></i> DeFi Portfolio Tracker</h2>
+                    <p>Track your DeFi positions, yield farming, and portfolio performance across chains</p>
+                    
+                    <div class="portfolio-controls">
+                        <div class="input-group">
+                            <input type="text" id="portfolioAddress" placeholder="Enter wallet address (0x...)" />
+                            <button id="analyzePortfolio" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Analyze Portfolio
+                            </button>
+                        </div>
+                        <div class="portfolio-filters">
+                            <button class="filter-btn active" data-filter="all">All Assets</button>
+                            <button class="filter-btn" data-filter="tokens">Tokens</button>
+                            <button class="filter-btn" data-filter="nfts">NFTs</button>
+                            <button class="filter-btn" data-filter="defi">DeFi</button>
+                        </div>
+                    </div>
+
+                    <div class="portfolio-summary" id="portfolioSummary">
+                        <!-- Portfolio summary cards -->
+                    </div>
+
+                    <div class="portfolio-details" id="portfolioDetails">
+                        <!-- Detailed portfolio breakdown -->
+                    </div>
+
+                    <div class="yield-opportunities" id="yieldOpportunities">
+                        <!-- Yield farming opportunities -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Assistant Tab -->
+            <div class="tab-content" id="ai">
+                <div class="section">
+                    <h2><i class="fas fa-robot"></i> AI Blockchain Assistant</h2>
+                    <p>Chat with AI powered by Tatum & Gemini MCP server</p>
+                    
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message ai-message">
+                                <div class="message-content">
+                                    <i class="fas fa-robot"></i>
+                                    <p>Hello! I'm your Gemini MCP AI assistant. I can help you with blockchain queries, gas optimization, wallet analysis, and more. What would you like to know?</p>
+                                </div>
+                            </div>
+                            <div class="message ai-message">
+                                <div class="message-content">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <p><strong>Commands you can use:</strong><br>
+                                    1) "Check wallet 0x123... on Ethereum"<br>
+                                    2) "Check wallet 0x123... across all chains"<br>
+                                    3) "Analyze portfolio 0x123... on Polygon"<br>
+                                    4) "Analyze portfolio 0x123... multi-chain"<br>
+                                    5) "Show gas price on Ethereum"<br>
+                                    6) "List supported chains"<br>
+                                    7) "Show system status"<br>
+                                    8) "Show MCP status"<br>
+                                    9) "Restart MCP server"<br>
+                                    10) "Force fallback mode"</p>
+                                    <p style="margin-top:8px;"><strong>What I can do now (MCP):</strong><br>
+                                    • Fetch real on-chain data (native balances + token counts)<br>
+                                    • Summarize per-chain holdings (ETH, Polygon, BSC, Arbitrum, Base, Optimism)<br>
+                                    • Portfolio summaries (counts-only, grounded by fetched data)<br>
+                                    • Gas price via RPC<br>
+                                    • Health/status endpoints and restart/fallback controls<br>
+                                    • Natural-language answers (Gemini) grounded by provided context
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Ask me about blockchain, gas fees, wallets..." />
+                            <button id="sendMessage" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NFT Gallery Tab -->
+            <div class="tab-content" id="nft">
+                <div class="section">
+                    <h2><i class="fas fa-image"></i> NFT Gallery</h2>
+                    <p>Discover, analyze, and track NFTs across multiple blockchains</p>
+                    
+                    <div class="nft-controls">
+                        <div class="input-group">
+                            <input type="text" id="nftAddress" placeholder="Enter wallet address (0x...)" />
+                            <button id="loadNFTs" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Load NFTs
+                            </button>
+                        </div>
+                        <div class="nft-filters">
+                            <button class="filter-btn active" data-filter="all">All NFTs</button>
+                            <button class="filter-btn" data-filter="ethereum">Ethereum</button>
+                            <button class="filter-btn" data-filter="polygon">Polygon</button>
+                            <button class="filter-btn" data-filter="bsc">BSC</button>
+                        </div>
+                    </div>
+
+                    <div class="nft-stats" id="nftStats">
+                        <!-- NFT statistics -->
+                    </div>
+
+                    <div class="nft-grid" id="nftGrid">
+                        <!-- NFT collection will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="tab-content" id="analytics">
+                <div class="section">
+                    <h2><i class="fas fa-chart-bar"></i> Blockchain Analytics</h2>
+                    <p>Real-time analytics and insights across multiple blockchains</p>
+                    
+                    <div class="analytics-dashboard">
+                        <div id="analyticsContent">
+                            <!-- Real analytics data will be loaded here -->
+                            <div class="loading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                Loading real-time analytics data...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- API Key Modal -->
+        <div id="apiKeyModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-key"></i> Set Tatum API Key</h3>
+                    <button id="closeModal" class="close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Enter your Tatum API key to access real blockchain data:</p>
+                    <div class="input-group">
+                        <input type="password" id="apiKeyInput" placeholder="Enter your Tatum API key (t-...)" />
+                        <button id="toggleVisibility" class="btn btn-secondary">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="api-key-info">
+                        <p><strong>How to get your API key:</strong></p>
+                        <ol>
+                            <li>Visit <a href="https://tatum.io" target="_blank">tatum.io</a></li>
+                            <li>Sign up for a free account</li>
+                            <li>Go to API Keys section</li>
+                            <li>Copy your API key (starts with 't-')</li>
+                        </ol>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="saveApiKey" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save API Key
+                    </button>
+                    <button id="testApiKey" class="btn btn-secondary">
+                        <i class="fas fa-test-tube"></i> Test Connection
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Built for Monthly Builder | Powered by Tatum APIs & Gemini MCP Server</p>
+            <div class="social">
+                <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

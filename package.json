@@ -1,0 +1,52 @@
+{
+  "name": "tatum-chainlens",
+  "version": "1.0.0",
+  "description": "Tatum ChainLens - Your Complete Blockchain Analytics Platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server-simple.js",
+    "start:bot": "node telegram-bot.js",
+    "start:both": "concurrently \"npm start\" \"npm run start:bot\"",
+    "dev": "nodemon server-simple.js",
+    "docker": "docker-compose up --build",
+    "setup": "node setup.js",
+    "test-api": "node test-api.js",
+    "test-wallet": "node test-wallet.js",
+    "test-fallback": "curl -X POST http://localhost:3000/api/force-fallback",
+    "status": "curl http://localhost:3000/api/status"
+  },
+  "keywords": [
+    "tatum-chainlens",
+    "tatum",
+    "blockchain",
+    "analytics",
+    "mcp",
+    "ai-chat",
+    "multi-wallet",
+    "nft-gallery",
+    "portfolio-tracker",
+    "hackathon",
+    "defi",
+    "nft",
+    "wallet-analysis",
+    "multi-chain",
+    "fallback-system"
+  ],
+  "author": "Tatum ChainLens Team - MCP Hackathon 2025",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^1.20.0",
+    "axios": "^1.6.0",
+    "concurrently": "^8.2.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.64.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
