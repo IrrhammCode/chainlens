@@ -1,6 +1,6 @@
-# Tatum ChainLens - Blockchain Analytics Platform
+ChainLens - Blockchain Analytics Platform
 
-A comprehensive blockchain analytics platform built for the Tatum MCP Hackathon 2025. Features multi-chain wallet analysis, NFT gallery, analytics dashboard, and AI chat with Gemini AI integration using Tatum APIs.
+A comprehensive blockchain analytics platform built for the Monthly builder 2025. Features multi-chain wallet analysis, NFT gallery, analytics dashboard, and AI chat with Gemini AI integration using Tatum APIs.
 
 ## 🚀 Features
 
@@ -180,4 +180,4 @@ MIT License - see LICENSE file for details
 
 ---
 
-Built with ❤️ for the Tatum MCP Hackathon 2025
+Built with ❤️ for the Monthly Builder 2025
