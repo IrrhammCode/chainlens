@@ -4,7 +4,7 @@
 ![Network](https://img.shields.io/badge/network-Ethereum%20Sepolia-grey)
 ![Status](https://img.shields.io/badge/status-Live%20Demo-green)
 
-**ChainLens** is a next-generation autonomous DeFi trading agent built for the **MetaMask Developer Hackathon**. It leverages **ERC-7715 (Advanced Permissions)** to enable "Set & Forget" trading strategies without custodying user funds.
+**ChainLens** is a next-generation autonomous DeFi trading agent. It leverages **ERC-7715 (Advanced Permissions)** to enable "Set & Forget" trading strategies without custodying user funds.
 
 > **The Vision:** Shift DeFi from *"User manually executing every trade"* to *"User setting policy, Agent executing strategy."*
 
@@ -15,7 +15,7 @@
 We are submitting **ChainLens** for the following MetaMask Developer Hackathon tracks:
 
 1.  **✨ Best Integration - Existing Project**
-    - Integrated ERC-7715 Advanced Permissions into the existing **ChainLens** analytics platform (built for Monthly Builder 2025) to transform it from a passive tracker to an active autonomous agent.
+    - Integrated ERC-7715 Advanced Permissions into the existing **ChainLens** analytics platform to transform it from a passive tracker to an active autonomous agent.
 2.  **🎨 Most Creative Use of Advanced Permissions**
     - Built a fully autonomous execution engine that handles complex strategies (DCA, Grid, Limit) purely through permission delegation.
 3.  **⚡ Best Use of Envio**
