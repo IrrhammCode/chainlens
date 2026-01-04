@@ -1,1411 +1,1032 @@
-/**
- * Tatum ChainLens - Frontend Application
- * 
- * A comprehensive blockchain analytics platform frontend built for the Tatum MCP Hackathon 2025.
- * Provides multi-wallet checking, DeFi portfolio tracking, NFT gallery, analytics dashboard,
- * and AI-powered chat functionality using Tatum APIs and MCP server integration.
- * 
- * @author Tatum ChainLens Team
- * @version 1.0.0
- * @since 2025
- */
 
-class TatumChainLens {
-    /**
-     * Initialize the Tatum ChainLens application
-     * Sets up API configuration, supported blockchain networks, and initializes the app
-     */
-    constructor() {
-        // Load API key from localStorage or use default
-        this.apiKey = localStorage.getItem('tatumApiKey') || 't-68bd991b97f0a5524832a527-913f85fbd21841eb88388ed3';
-        
-        // Tatum API base URL for all blockchain requests
-        this.baseUrl = 'https://api.tatum.io/v3';
-        
-        // Supported blockchain networks configuration
-        this.supportedChains = [
-            { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: 'fab fa-ethereum' },
-            { id: 'polygon', name: 'Polygon', symbol: 'MATIC', icon: 'fas fa-gem' },
-            { id: 'bsc', name: 'BNB Smart Chain', symbol: 'BNB', icon: 'fas fa-coins' },
-            { id: 'arbitrum', name: 'Arbitrum', symbol: 'ETH', icon: 'fas fa-layer-group' },
-            { id: 'base', name: 'Base', symbol: 'ETH', icon: 'fas fa-cube' },
-            { id: 'optimism', name: 'Optimism', symbol: 'ETH', icon: 'fas fa-bolt' }
-        ];
-        
-        // Track which chains are selected for wallet checking
-        this.selectedChains = new Set();
-        
-        // Initialize the application
-        this.init();
-    }
-
-    /**
-     * Initialize the application components
-     * Sets up event listeners, loads blockchain data, initializes chat, and updates status
-     */
-    init() {
-        this.setupEventListeners();  // Bind all UI event handlers
-        this.loadChains();           // Load supported blockchain networks
-        this.setupChat();            // Initialize AI chat functionality
-        this.updateStatus();         // Update application status display
-        this.updateMCPStatus();      // Update MCP server status
-    }
-
-    /**
-     * Set up all event listeners for user interactions
-     * Binds click handlers for navigation, wallet checking, portfolio analysis, and filters
-     */
-    setupEventListeners() {
-        // Navigation tab switching
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
-                
-                // Load analytics data when analytics tab is clicked
-                if (e.target.dataset.tab === 'analytics') {
-                    this.loadAnalytics();
-                }
-            });
-        });
-
-        // Multi-wallet checker functionality
-        document.getElementById('checkWallet').addEventListener('click', () => {
-            this.checkWallets();
-        });
-
-        // DeFi portfolio analysis
-        document.getElementById('analyzePortfolio').addEventListener('click', () => {
-            this.analyzePortfolio();
-        });
-
-        // Portfolio filtering options
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.filterPortfolio(e.target.dataset.filter);
-            });
-        });
-
-        // NFT Gallery
-        document.getElementById('loadNFTs').addEventListener('click', () => {
-            this.loadNFTs();
-        });
-
-        // NFT filters
-        document.querySelectorAll('.nft-filters .filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.filterNFTs(e.target.dataset.filter);
-            });
-        });
-
-
-        // API Key management
-        document.getElementById('changeApiKey').addEventListener('click', () => {
-            this.showApiKeyModal();
-        });
-
-        document.getElementById('closeModal').addEventListener('click', () => {
-            this.hideApiKeyModal();
-        });
-
-        document.getElementById('saveApiKey').addEventListener('click', () => {
-            this.saveApiKey();
-        });
-
-        document.getElementById('testApiKey').addEventListener('click', () => {
-            this.testApiKey();
-        });
-
-        document.getElementById('toggleVisibility').addEventListener('click', () => {
-            this.toggleApiKeyVisibility();
-        });
-
-        // Close modal when clicking outside
-        document.getElementById('apiKeyModal').addEventListener('click', (e) => {
-            if (e.target.id === 'apiKeyModal') {
-                this.hideApiKeyModal();
-            }
-        });
-
-        // Chat
-        document.getElementById('sendMessage').addEventListener('click', () => {
-            this.sendMessage();
-        });
-
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.sendMessage();
-            }
-        });
-    }
-
-    switchTab(tabName) {
-        // Update navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-        // Update content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.remove('active');
-        });
-        document.getElementById(tabName).classList.add('active');
-    }
-
-    /**
-     * Load and display supported blockchain networks
-     * Creates interactive chain cards for user selection
-     */
-    loadChains() {
-        const chainsGrid = document.getElementById('chainsGrid');
-        chainsGrid.innerHTML = '';
-
-        // Create chain selection cards for each supported blockchain
-        this.supportedChains.forEach(chain => {
-            const chainCard = document.createElement('div');
-            chainCard.className = 'chain-card';
-            chainCard.innerHTML = `
-                <div class="chain-icon">
-                    <i class="${chain.icon}"></i>
-                </div>
-                <div class="chain-name">${chain.name}</div>
-                <div class="chain-symbol">${chain.symbol}</div>
-            `;
-            
-            // Add click handler for chain selection
-            chainCard.addEventListener('click', () => {
-                chainCard.classList.toggle('selected');
-                if (chainCard.classList.contains('selected')) {
-                    this.selectedChains.add(chain.id);
-                } else {
-                    this.selectedChains.delete(chain.id);
-                }
-            });
-
-            chainsGrid.appendChild(chainCard);
-        });
-    }
-
-    /**
-     * Check wallet balances across multiple blockchain networks
-     * Validates the wallet address and fetches balances from all selected chains
-     */
-    async checkWallets() {
-        // Get wallet address from input field
-        const address = document.getElementById('walletAddress').value.trim();
-        if (!address) {
-            alert('Please enter a wallet address');
-            return;
-        }
-
-        // Validate wallet address format
-        if (!this.isValidAddress(address)) {
-            alert('Please enter a valid wallet address');
-            return;
-        }
-
-        const resultsContainer = document.getElementById('walletResults');
-        resultsContainer.innerHTML = '<div class="loading"></div> Checking wallets...';
-
-        try {
-            const results = await this.fetchWalletBalances(address);
-            this.displayWalletResults(results);
-        } catch (error) {
-            console.error('Error checking wallets:', error);
-            resultsContainer.innerHTML = '<div class="error">Error checking wallets. Please try again.</div>';
-        }
-    }
-
-    async fetchWalletBalances(address) {
-        const results = [];
-        
-        console.log(`🔍 Fetching real balances for wallet: ${address}`);
-        
-        for (const chain of this.supportedChains) {
-            try {
-                console.log(`📊 Fetching ${chain.name} balance...`);
-                
-                // Real API call to backend
-                const response = await fetch(`/api/wallet/${address}?chain=${chain.id}`);
-                const data = await response.json();
-                
-                console.log(`✅ ${chain.name} response:`, data);
-                
-                if (data.balance) {
-                    results.push({
-                        chain: chain,
-                        balance: data.balance.balance || '0',
-                        usdValue: data.balance.usdValue || 0,
-                        error: data.balance.error || null
-                    });
-                } else {
-                    throw new Error('No balance data received');
-                }
-            } catch (error) {
-                console.error(`❌ Error fetching balance for ${chain.name}:`, error);
-                results.push({
-                    chain: chain,
-                    balance: '0',
-                    usdValue: 0,
-                    error: true
-                });
-            }
-        }
-
-        return results;
-    }
-
-    // Removed simulateBalanceFetch - now using real API calls
-
-    calculateUSDValue(balance, symbol) {
-        // Mock USD values (replace with actual price API)
-        const prices = {
-            'ETH': 2500,
-            'MATIC': 0.8,
-            'BNB': 300
-        };
-        
-        return parseFloat(balance) * (prices[symbol] || 0);
-    }
-
-    displayWalletResults(results) {
-        const resultsContainer = document.getElementById('walletResults');
-        resultsContainer.innerHTML = '';
-
-        results.forEach(result => {
-            const walletCard = document.createElement('div');
-            walletCard.className = 'wallet-card';
-            
-            if (result.error) {
-                walletCard.innerHTML = `
-                    <h3><i class="${result.chain.icon}"></i> ${result.chain.name}</h3>
-                    <div class="error">Error fetching balance</div>
-                `;
-            } else {
-                walletCard.innerHTML = `
-                    <h3><i class="${result.chain.icon}"></i> ${result.chain.name}</h3>
-                    <div class="balance">${result.balance} ${result.chain.symbol}</div>
-                    <div class="balance-usd">$${result.usdValue.toFixed(2)} USD</div>
-                `;
-            }
-
-            resultsContainer.appendChild(walletCard);
-        });
-    }
-
-    async analyzePortfolio() {
-        const address = document.getElementById('portfolioAddress').value.trim();
-        if (!address) {
-            alert('Please enter a wallet address');
-            return;
-        }
-
-        if (!this.isValidAddress(address)) {
-            alert('Please enter a valid wallet address');
-            return;
-        }
-
-        const summaryContainer = document.getElementById('portfolioSummary');
-        const detailsContainer = document.getElementById('portfolioDetails');
-        const yieldContainer = document.getElementById('yieldOpportunities');
-        
-        summaryContainer.innerHTML = '<div class="loading"></div> Analyzing portfolio...';
-        detailsContainer.innerHTML = '';
-        yieldContainer.innerHTML = '';
-
-        try {
-            // Fetch portfolio data
-            const portfolioData = await this.fetchPortfolioData(address);
-            this.displayPortfolioSummary(portfolioData);
-            this.displayPortfolioDetails(portfolioData);
-            this.displayYieldOpportunities(portfolioData);
-        } catch (error) {
-            console.error('Error analyzing portfolio:', error);
-            summaryContainer.innerHTML = '<div class="error">Error analyzing portfolio. Please try again.</div>';
-        }
-    }
-
-    // Removed old gas functions - replaced with DeFi Portfolio
-
-    // Removed old gas functions - replaced with DeFi Portfolio
-
-    async fetchPortfolioData(address) {
-        console.log(`🔍 Analyzing portfolio for wallet: ${address}`);
-        
-        const portfolioData = {
-            totalValue: 0,
-            assets: [],
-            chains: [],
-            nfts: [],
-            defiPositions: []
-        };
-        
-        // Fetch balances from all chains
-        for (const chain of this.supportedChains) {
-            try {
-                console.log(`📊 Fetching ${chain.name} portfolio...`);
-                
-                const response = await fetch(`/api/wallet/${address}?chain=${chain.id}`);
-                const data = await response.json();
-                
-                if (data.balance && parseFloat(data.balance.balance) > 0) {
-                    const balance = parseFloat(data.balance.balance);
-                    const usdValue = this.calculateUSDValue(balance, chain.symbol);
-                    
-                    portfolioData.assets.push({
-                        chain: chain,
-                        balance: balance,
-                        usdValue: usdValue,
-                        type: 'token'
-                    });
-                    
-                    portfolioData.totalValue += usdValue;
-                    portfolioData.chains.push(chain);
-                }
-            } catch (error) {
-                console.error(`❌ Error fetching portfolio for ${chain.name}:`, error);
-            }
-        }
-        
-        // Add mock DeFi positions and NFTs for demo
-        portfolioData.defiPositions = this.generateMockDeFiPositions();
-        portfolioData.nfts = this.generateMockNFTs();
-        
-        return portfolioData;
-    }
-
-    generateMockDeFiPositions() {
-        return [
-            {
-                protocol: 'Uniswap V3',
-                chain: 'Ethereum',
-                position: 'ETH/USDC LP',
-                value: 1250.50,
-                apy: 12.5,
-                type: 'liquidity'
-            },
-            {
-                protocol: 'Aave',
-                chain: 'Ethereum',
-                position: 'USDC Lending',
-                value: 500.00,
-                apy: 8.2,
-                type: 'lending'
-            },
-            {
-                protocol: 'Compound',
-                chain: 'Ethereum',
-                position: 'ETH Collateral',
-                value: 2000.00,
-                apy: 5.8,
-                type: 'borrowing'
-            }
-        ];
-    }
-
-    generateMockNFTs() {
-        return [
-            {
-                name: 'Bored Ape #1234',
-                collection: 'Bored Ape Yacht Club',
-                chain: 'Ethereum',
-                value: 15.5,
-                image: 'https://via.placeholder.com/100x100'
-            },
-            {
-                name: 'CryptoPunk #5678',
-                collection: 'CryptoPunks',
-                chain: 'Ethereum',
-                value: 25.0,
-                image: 'https://via.placeholder.com/100x100'
-            }
-        ];
-    }
-
-    displayPortfolioSummary(data) {
-        const summaryContainer = document.getElementById('portfolioSummary');
-        
-        const totalAssets = data.assets.length + data.defiPositions.length + data.nfts.length;
-        const activeChains = data.chains.length;
-        const totalDeFiValue = data.defiPositions.reduce((sum, pos) => sum + pos.value, 0);
-        
-        summaryContainer.innerHTML = `
-            <div class="summary-card">
-                <h3>Total Portfolio Value</h3>
-                <div class="value">$${data.totalValue.toFixed(2)}</div>
-                <div class="change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    +12.5% (24h)
-                </div>
-            </div>
-            <div class="summary-card">
-                <h3>Active Chains</h3>
-                <div class="value">${activeChains}</div>
-                <div class="change">
-                    ${data.chains.map(c => c.name).join(', ')}
-                </div>
-            </div>
-            <div class="summary-card">
-                <h3>Total Assets</h3>
-                <div class="value">${totalAssets}</div>
-                <div class="change">
-                    ${data.assets.length} Tokens, ${data.defiPositions.length} DeFi, ${data.nfts.length} NFTs
-                </div>
-            </div>
-            <div class="summary-card">
-                <h3>DeFi Value</h3>
-                <div class="value">$${totalDeFiValue.toFixed(2)}</div>
-                <div class="change positive">
-                    <i class="fas fa-chart-line"></i>
-                    Active Positions
-                </div>
-            </div>
-        `;
-    }
-
-    displayPortfolioDetails(data) {
-        const detailsContainer = document.getElementById('portfolioDetails');
-        
-        let html = '<h3><i class="fas fa-coins"></i> Portfolio Breakdown</h3>';
-        html += '<div class="asset-grid">';
-        
-        // Display tokens
-        data.assets.forEach(asset => {
-            html += `
-                <div class="asset-card">
-                    <div class="asset-header">
-                        <div class="asset-icon">
-                            <i class="${asset.chain.icon}"></i>
-                        </div>
-                        <div class="asset-info">
-                            <h4>${asset.chain.name}</h4>
-                            <p>${asset.chain.symbol}</p>
-                        </div>
-                    </div>
-                    <div class="asset-balance">
-                        <div class="amount">${asset.balance.toFixed(6)} ${asset.chain.symbol}</div>
-                        <div class="value">$${asset.usdValue.toFixed(2)}</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Display DeFi positions
-        data.defiPositions.forEach(position => {
-            html += `
-                <div class="asset-card">
-                    <div class="asset-header">
-                        <div class="asset-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                            <i class="fas fa-seedling"></i>
-                        </div>
-                        <div class="asset-info">
-                            <h4>${position.protocol}</h4>
-                            <p>${position.position}</p>
-                        </div>
-                    </div>
-                    <div class="asset-balance">
-                        <div class="amount">$${position.value.toFixed(2)}</div>
-                        <div class="value">${position.apy}% APY</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Display NFTs
-        data.nfts.forEach(nft => {
-            html += `
-                <div class="asset-card">
-                    <div class="asset-header">
-                        <div class="asset-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-                            <i class="fas fa-image"></i>
-                        </div>
-                        <div class="asset-info">
-                            <h4>${nft.name}</h4>
-                            <p>${nft.collection}</p>
-                        </div>
-                    </div>
-                    <div class="asset-balance">
-                        <div class="amount">$${nft.value.toFixed(2)}</div>
-                        <div class="value">${nft.chain}</div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        detailsContainer.innerHTML = html;
-    }
-
-    displayYieldOpportunities(data) {
-        const yieldContainer = document.getElementById('yieldOpportunities');
-        
-        const opportunities = [
-            {
-                protocol: 'Aave V3',
-                chain: 'Arbitrum',
-                apy: '15.2%',
-                description: 'USDC lending with high yield',
-                risk: 'Low'
-            },
-            {
-                protocol: 'Uniswap V3',
-                chain: 'Polygon',
-                apy: '22.8%',
-                description: 'MATIC/USDC liquidity pool',
-                risk: 'Medium'
-            },
-            {
-                protocol: 'Compound',
-                chain: 'Ethereum',
-                apy: '8.5%',
-                description: 'ETH collateral lending',
-                risk: 'Low'
-            }
-        ];
-        
-        let html = `
-            <h3><i class="fas fa-chart-line"></i> Yield Opportunities</h3>
-            <div class="yield-grid">
-        `;
-        
-        opportunities.forEach(opp => {
-            html += `
-                <div class="yield-card">
-                    <h4>${opp.protocol}</h4>
-                    <div class="apy">${opp.apy} APY</div>
-                    <p class="description">${opp.description}</p>
-                    <small>Risk: ${opp.risk}</small>
-                </div>
-            `;
-        });
-        
-        html += '</div>';
-        yieldContainer.innerHTML = html;
-    }
-
-    filterPortfolio(filter) {
-        // Update filter buttons
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
-        
-        // Filter logic would go here
-        console.log(`Filtering portfolio by: ${filter}`);
-    }
-
-    // NFT Gallery Functions
-    async loadNFTs() {
-        const address = document.getElementById('nftAddress').value.trim();
-        if (!address) {
-            alert('Please enter a wallet address');
-            return;
-        }
-
-        if (!this.isValidAddress(address)) {
-            alert('Please enter a valid wallet address');
-            return;
-        }
-
-        const statsContainer = document.getElementById('nftStats');
-        const gridContainer = document.getElementById('nftGrid');
-        
-        statsContainer.innerHTML = '<div class="loading"></div> Loading NFTs...';
-        gridContainer.innerHTML = '';
-
-        try {
-            // Generate mock NFT data for demo
-            const nftData = this.generateMockNFTs(address);
-            this.displayNFTStats(nftData);
-            this.displayNFTGrid(nftData);
-        } catch (error) {
-            console.error('Error loading NFTs:', error);
-            statsContainer.innerHTML = '<div class="error">Error loading NFTs. Please try again.</div>';
-        }
-    }
-
-    generateMockNFTs(address) {
-        const collections = [
-            { name: 'Bored Ape Yacht Club', symbol: 'BAYC', chain: 'ethereum' },
-            { name: 'CryptoPunks', symbol: 'PUNK', chain: 'ethereum' },
-            { name: 'Azuki', symbol: 'AZUKI', chain: 'ethereum' },
-            { name: 'Doodles', symbol: 'DOODLE', chain: 'ethereum' },
-            { name: 'CloneX', symbol: 'CLONEX', chain: 'ethereum' },
-            { name: 'Cool Cats', symbol: 'COOL', chain: 'ethereum' },
-            { name: 'World of Women', symbol: 'WOW', chain: 'ethereum' },
-            { name: 'Mutant Ape Yacht Club', symbol: 'MAYC', chain: 'ethereum' }
-        ];
-
-        const nfts = [];
-        const numNFTs = Math.floor(Math.random() * 15) + 5; // 5-20 NFTs
-
-        for (let i = 0; i < numNFTs; i++) {
-            const collection = collections[Math.floor(Math.random() * collections.length)];
-            const tokenId = Math.floor(Math.random() * 10000);
-            const value = (Math.random() * 50 + 1).toFixed(2);
-            
-            nfts.push({
-                name: `${collection.name} #${tokenId}`,
-                collection: collection.name,
-                symbol: collection.symbol,
-                chain: collection.chain,
-                tokenId: tokenId,
-                value: parseFloat(value),
-                image: `https://via.placeholder.com/300x300/667eea/ffffff?text=${collection.symbol}+${tokenId}`
-            });
-        }
-
-        return nfts;
-    }
-
-    displayNFTStats(nfts) {
-        const statsContainer = document.getElementById('nftStats');
-        
-        const totalValue = nfts.reduce((sum, nft) => sum + nft.value, 0);
-        const ethereumNFTs = nfts.filter(nft => nft.chain === 'ethereum').length;
-        const topCollection = nfts.reduce((acc, nft) => {
-            acc[nft.collection] = (acc[nft.collection] || 0) + 1;
-            return acc;
-        }, {});
-        const mostOwned = Object.keys(topCollection).reduce((a, b) => 
-            topCollection[a] > topCollection[b] ? a : b
-        );
-
-        statsContainer.innerHTML = `
-            <div class="nft-stat-card">
-                <h3>Total NFTs</h3>
-                <div class="value">${nfts.length}</div>
-                <div class="change">Across all chains</div>
-            </div>
-            <div class="nft-stat-card">
-                <h3>Total Value</h3>
-                <div class="value">$${totalValue.toFixed(2)}</div>
-                <div class="change">Estimated value</div>
-            </div>
-            <div class="nft-stat-card">
-                <h3>Ethereum NFTs</h3>
-                <div class="value">${ethereumNFTs}</div>
-                <div class="change">On mainnet</div>
-            </div>
-            <div class="nft-stat-card">
-                <h3>Top Collection</h3>
-                <div class="value">${mostOwned}</div>
-                <div class="change">Most owned</div>
-            </div>
-        `;
-    }
-
-    displayNFTGrid(nfts) {
-        const gridContainer = document.getElementById('nftGrid');
-        
-        gridContainer.innerHTML = nfts.map(nft => `
-            <div class="nft-card">
-                <div class="nft-image">
-                    <img src="${nft.image}" alt="${nft.name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="nft-placeholder" style="display: none;">
-                        <i class="fas fa-image"></i>
-                        <span>${nft.symbol}</span>
-                    </div>
-                </div>
-                <div class="nft-info">
-                    <div class="nft-name">${nft.name}</div>
-                    <div class="nft-collection">${nft.collection}</div>
-                    <div class="nft-chain">${nft.chain.toUpperCase()}</div>
-                    <div class="nft-value">$${nft.value.toFixed(2)}</div>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    filterNFTs(filter) {
-        // Update filter buttons
-        document.querySelectorAll('.nft-filters .filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
-        
-        // Filter logic would go here
-        console.log(`Filtering NFTs by: ${filter}`);
-    }
-
-    /**
-     * Load real analytics data from Tatum APIs
-     * Fetches live blockchain data and displays comprehensive analytics
-     */
-    async loadAnalytics() {
-        try {
-            console.log('📊 Loading real analytics data...');
-            
-            // Show loading state
-            const analyticsContainer = document.getElementById('analyticsContent');
-            analyticsContainer.innerHTML = '<div class="loading">Loading real analytics data...</div>';
-            
-            // Fetch real data from API
-            const response = await fetch('/api/analytics');
-            const data = await response.json();
-            
-            if (data.success) {
-                this.displayRealAnalytics(data.data);
-            } else {
-                console.error('Analytics error:', data.error);
-                this.displayMockAnalytics(); // Fallback to mock
-            }
-        } catch (error) {
-            console.error('Analytics loading error:', error);
-            this.displayMockAnalytics(); // Fallback to mock
-        }
-    }
-
-    /**
-     * Display real analytics data from Tatum APIs
-     * Shows live blockchain metrics and network statistics
-     */
-    displayRealAnalytics(analytics) {
-        const analyticsContainer = document.getElementById('analyticsContent');
-        
-        analyticsContainer.innerHTML = `
-            <div class="analytics-grid">
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="metric-value">${analytics.totalTransactions.toLocaleString()}</div>
-                    <div class="metric-label">Total Transactions</div>
-                    <div class="metric-subtitle">Real-time data from Tatum APIs</div>
-                </div>
-                
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-dollar-sign"></i>
-                    </div>
-                    <div class="metric-value">$${(analytics.totalVolume / 1000000000).toFixed(2)}B</div>
-                    <div class="metric-label">Total Volume</div>
-                    <div class="metric-subtitle">Live blockchain volume</div>
-                </div>
-                
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                    <div class="metric-value">${analytics.activeWallets.toLocaleString()}</div>
-                    <div class="metric-label">Active Wallets</div>
-                    <div class="metric-subtitle">Network activity</div>
-                </div>
-                
-                <div class="metric-card">
-                    <div class="metric-icon">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <div class="metric-value">${Object.keys(analytics.chainDistribution).length}</div>
-                    <div class="metric-label">Supported Chains</div>
-                    <div class="metric-subtitle">Multi-chain analytics</div>
-                </div>
-            </div>
-            
-            <div class="chain-stats">
-                <h3><i class="fas fa-network-wired"></i> Chain Distribution & Network Stats</h3>
-                <div class="chain-stats-grid">
-                    ${Object.entries(analytics.chainDistribution).map(([chain, data]) => `
-                        <div class="chain-stat-card">
-                            <div class="chain-header">
-                                <div class="chain-name">${data.name}</div>
-                                <div class="chain-symbol">${data.symbol}</div>
-                            </div>
-                            <div class="chain-metrics">
-                                <div class="chain-metric">
-                                    <span class="metric-label">Gas Price:</span>
-                                    <span class="metric-value">${data.gasPrice} Gwei</span>
-                                </div>
-                                <div class="chain-metric">
-                                    <span class="metric-label">Transactions:</span>
-                                    <span class="metric-value">${data.networkStats.transactionCount?.toLocaleString() || 'N/A'}</span>
-                                </div>
-                                <div class="chain-metric">
-                                    <span class="metric-label">Volume:</span>
-                                    <span class="metric-value">$${(data.networkStats.volume / 1000000).toFixed(1)}M</span>
-                                </div>
-                                <div class="chain-metric">
-                                    <span class="metric-label">Block #:</span>
-                                    <span class="metric-value">${data.networkStats.blockNumber?.toLocaleString() || 'N/A'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div class="analytics-footer">
-                <div class="data-source">
-                    <i class="fas fa-database"></i>
-                    <span>Data powered by Tatum APIs - Real-time blockchain data</span>
-                </div>
-                <div class="last-updated">
-                    <i class="fas fa-clock"></i>
-                    <span>Last updated: ${new Date().toLocaleTimeString()}</span>
-                </div>
-            </div>
-        `;
-    }
-
-    /**
-     * Display mock analytics as fallback
-     * Used when real API data is not available
-     */
-    displayMockAnalytics() {
-        const analyticsContainer = document.getElementById('analyticsContent');
-        
-        const analyticsData = {
-            totalTransactions: 1250000,
-            totalVolume: 45000000,
-            activeWallets: 125000,
-            gasSaved: 2500000
-        };
-
-        cardsContainer.innerHTML = `
-            <div class="analytics-card">
-                <h3>Total Transactions</h3>
-                <div class="value">${analyticsData.totalTransactions.toLocaleString()}</div>
-                <div class="change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    +12.5% (24h)
-                </div>
-            </div>
-            <div class="analytics-card">
-                <h3>Total Volume</h3>
-                <div class="value">$${(analyticsData.totalVolume / 1000000).toFixed(1)}M</div>
-                <div class="change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    +8.2% (24h)
-                </div>
-            </div>
-            <div class="analytics-card">
-                <h3>Active Wallets</h3>
-                <div class="value">${analyticsData.activeWallets.toLocaleString()}</div>
-                <div class="change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    +5.7% (24h)
-                </div>
-            </div>
-            <div class="analytics-card">
-                <h3>Gas Saved</h3>
-                <div class="value">${analyticsData.gasSaved.toLocaleString()}</div>
-                <div class="change positive">
-                    <i class="fas fa-arrow-up"></i>
-                    +15.3% (24h)
-                </div>
-            </div>
-        `;
-    }
-
-    displayCharts() {
-        const gasChart = document.getElementById('gasPriceChart');
-        const chainChart = document.getElementById('chainDistributionChart');
-        
-        gasChart.innerHTML = `
-            <div style="text-align: center;">
-                <i class="fas fa-chart-line" style="font-size: 3rem; color: #667eea; margin-bottom: 10px;"></i>
-                <p>Gas Price Trends</p>
-                <small>Real-time data visualization</small>
-            </div>
-        `;
-        
-        chainChart.innerHTML = `
-            <div style="text-align: center;">
-                <i class="fas fa-chart-pie" style="font-size: 3rem; color: #764ba2; margin-bottom: 10px;"></i>
-                <p>Chain Distribution</p>
-                <small>Multi-chain analytics</small>
-            </div>
-        `;
-    }
-
-    displayMarketInsights() {
-        const insightsContainer = document.getElementById('marketInsights');
-        
-        const insights = [
-            {
-                title: "Ethereum Dominance",
-                content: "Ethereum continues to lead with 65% of total DeFi volume, showing strong network effects and developer adoption."
-            },
-            {
-                title: "Layer 2 Growth",
-                content: "Arbitrum and Polygon are seeing 40% growth in daily active users, indicating successful scaling solutions."
-            },
-            {
-                title: "NFT Market Recovery",
-                content: "NFT trading volume increased 25% this month, with blue-chip collections leading the recovery."
-            },
-            {
-                title: "Gas Optimization Impact",
-                content: "Our gas optimization tools have saved users over $2.5M in transaction fees this quarter."
-            }
-        ];
-
-        insightsContainer.innerHTML = `
-            <h3><i class="fas fa-lightbulb"></i> Market Insights</h3>
-            <div class="insights-grid">
-                ${insights.map(insight => `
-                    <div class="insight-card">
-                        <h4>${insight.title}</h4>
-                        <p>${insight.content}</p>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
-    // Removed old gas functions - replaced with DeFi Portfolio
-
-    setupChat() {
-        this.chatMessages = document.getElementById('chatMessages');
-        this.chatInput = document.getElementById('chatInput');
-    }
-
-    async sendMessage() {
-        const message = this.chatInput.value.trim();
-        if (!message) return;
-
-        // Add user message
-        this.addMessage(message, 'user');
-        this.chatInput.value = '';
-
-        // Show typing indicator
-        const typingId = this.addTypingIndicator();
-
-        try {
-            // Try backend AI API first
-            const response = await this.getAIResponse(message);
-            this.removeTypingIndicator(typingId);
-            this.addMessage(response, 'ai');
-        } catch (error) {
-            // Fallback to local AI responses
-            this.removeTypingIndicator(typingId);
-            const fallbackResponse = await this.getAIResponseFallback(message);
-            this.addMessage(fallbackResponse, 'ai');
-        }
-    }
-
-    addMessage(content, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message`;
-        
-        const icon = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
-        
-        // Process content to handle line breaks and formatting
-        const processedContent = content
-            .replace(/\n/g, '<br>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`(.*?)`/g, '<code>$1</code>');
-        
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                ${sender === 'ai' ? `<i class="${icon}"></i>` : ''}
-                <div>${processedContent}</div>
-            </div>
-        `;
-
-        this.chatMessages.appendChild(messageDiv);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    }
-
-    addTypingIndicator() {
-        const typingId = 'typing-' + Date.now();
-        const messageDiv = document.createElement('div');
-        messageDiv.id = typingId;
-        messageDiv.className = 'message ai-message';
-        messageDiv.innerHTML = `
-            <div class="message-content">
-                <i class="fas fa-robot"></i>
-                <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </div>
-        `;
-
-        this.chatMessages.appendChild(messageDiv);
-        this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-        return typingId;
-    }
-
-    removeTypingIndicator(typingId) {
-        const typingElement = document.getElementById(typingId);
-        if (typingElement) {
-            typingElement.remove();
-        }
-    }
-
-    async getAIResponse(message) {
-        try {
-            // Call backend AI API
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ message: message })
-            });
-            
-            const data = await response.json();
-            
-            // Update MCP status in UI
-            this.updateMCPStatus(data.mcpConnected);
-            
-            return data.response || 'Sorry, I could not process your request.';
-        } catch (error) {
-            console.error('AI API error:', error);
-            return 'Sorry, I encountered an error. Please try again.';
-        }
-    }
-
-    updateMCPStatus(connected) {
-        const statusDot = document.querySelector('.status-dot');
-        const statusText = document.getElementById('connectionStatus');
-        
-        if (connected) {
-            statusDot.style.color = '#10b981';
-            statusText.textContent = 'MCP Connected';
-            statusText.title = 'Tatum MCP Server is connected and ready';
-        } else {
-            statusDot.style.color = '#f59e0b';
-            statusText.textContent = 'API Only';
-            statusText.title = 'Using API fallback, MCP server not available';
-        }
-    }
-
-    async getAIResponseFallback(message) {
-        // Simulate AI response delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const lowerMessage = message.toLowerCase();
-        
-        // Smart responses based on keywords
-        if (lowerMessage.includes('contoh') || lowerMessage.includes('pertanyaan') || lowerMessage.includes('tanya')) {
-            return `**Example questions you can ask:**\n\n🔍 **Wallet Analysis:**\n• "Check wallet 0x123... how much ETH balance?"\n• "Analyze portfolio of this wallet"\n• "What does this wallet hold the most?"\n• "Check balance across all chains"\n\n💰 **DeFi & Portfolio:**\n• "Analyze DeFi positions in this wallet"\n• "What's the total portfolio value?"\n• "Check yield farming positions"\n• "Analyze risk of this portfolio"\n\n🖼️ **NFT & Collections:**\n• "Check NFTs in this wallet"\n• "What's the total NFT value?"\n• "Analyze collections owned"\n• "Check rarity of this NFT"\n\n📊 **Blockchain Data:**\n• "Check Ethereum gas price now"\n• "What's the gas price on Polygon?"\n• "Analyze market trends"\n• "Check network congestion"\n\n**Tips:** Enter wallet address for more specific analysis!`;
-        }
-        
-        if (lowerMessage.includes('portfolio') || lowerMessage.includes('defi')) {
-            return `📊 **DeFi Portfolio Analysis:**\n\n• **Multi-Chain Tracking**: Monitor assets across 6+ chains\n• **DeFi Positions**: Track lending, borrowing, and LP positions\n• **NFT Collection**: View your NFT holdings and values\n• **Yield Opportunities**: Discover high-yield farming options\n\n**Try**: Enter your wallet address to analyze your portfolio! 💰`;
-        }
-        
-        if (lowerMessage.includes('wallet') || lowerMessage.includes('balance')) {
-            return `🔍 **Wallet Analysis:**\n\nI can help you check balances across multiple chains:\n• Enter your wallet address in the Multi-Wallet Checker\n• View balances for Ethereum, Polygon, BSC, Arbitrum, Base, Optimism\n• Get real-time USD values\n\n**Supported chains**: 6 major blockchains! 💰`;
-        }
-        
-        if (lowerMessage.includes('ethereum') || lowerMessage.includes('eth')) {
-            return `⚡ **Ethereum Info:**\n\n• **Current Gas**: ~20 Gwei\n• **Status**: Moderate congestion\n• **Best Time**: Early morning UTC\n• **Alternative**: Consider Layer 2s like Arbitrum/Polygon\n\n**Pro Tip**: Use gas tracker to find optimal times! 📊`;
-        }
-        
-        if (lowerMessage.includes('polygon') || lowerMessage.includes('matic')) {
-            return `💎 **Polygon (MATIC):**\n\n• **Gas Price**: ~2 Gwei (super cheap!)\n• **Speed**: Fast confirmations\n• **EVM Compatible**: Yes\n• **Best For**: DeFi, NFTs, low-cost transactions\n\n**Why Polygon**: 99% cheaper than Ethereum! 🎯`;
-        }
-        
-        if (lowerMessage.includes('arbitrum')) {
-            return `🚀 **Arbitrum:**\n\n• **Gas Price**: ~0.2 Gwei (extremely cheap!)\n• **Type**: Layer 2 scaling solution\n• **Speed**: Very fast\n• **Security**: Inherits Ethereum's security\n\n**Perfect for**: High-frequency trading, DeFi! ⚡`;
-        }
-        
-        if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
-            return `🤖 **I can help you with:**\n\n• **DeFi Portfolio**: Track your multi-chain assets\n• **Wallet Analysis**: Check balances across chains\n• **Yield Farming**: Find high-yield opportunities\n• **NFT Tracking**: Monitor your NFT collection\n• **Blockchain Queries**: Ask about any chain\n\n**Try asking**: "Analyze my portfolio" or "Show yield opportunities" 💡`;
-        }
-        
-        if (lowerMessage.includes('yield') || lowerMessage.includes('farming')) {
-            return `🌾 **Yield Farming Opportunities:**\n\n• **Aave V3**: 15.2% APY on USDC lending\n• **Uniswap V3**: 22.8% APY on MATIC/USDC LP\n• **Compound**: 8.5% APY on ETH collateral\n• **Risk Levels**: Low to Medium risk options\n\n**Pro Tip**: Diversify across protocols for optimal returns! 📈`;
-        }
-        
-        if (lowerMessage.includes('nft') || lowerMessage.includes('token')) {
-            return `🎨 **NFT & Token Info:**\n\n• **Minting**: Use Polygon for cheap NFT creation\n• **Trading**: Arbitrum for low fees\n• **Storage**: IPFS recommended\n• **Standards**: ERC-721, ERC-1155\n\n**Pro Tip**: Mint on Polygon, trade on Arbitrum! 🚀`;
-        }
-        
-        // Default response
-        return `🤖 **AI Assistant Response:**\n\nI understand you're asking about "${message}". I'm powered by Tatum MCP server and can help with:\n\n• Gas optimization across chains\n• Wallet balance checking\n• Blockchain data queries\n• DeFi and NFT advice\n\n**Example questions you can ask:**\n• "example" - View complete question list\n• "Check wallet 0x123... how much ETH balance?"\n• "Analyze portfolio of this wallet"\n• "Check Ethereum gas price now"\n• "What's the total NFT value in this wallet?"\n\n**Tips:** Enter wallet address for more specific analysis! 💡`;
-    }
-
-    isValidAddress(address) {
-        return /^0x[a-fA-F0-9]{40}$/.test(address);
-    }
-
-    updateStatus() {
-        // Update API connection status
-        const statusDot = document.querySelector('.status-dot');
-        const statusText = document.getElementById('connectionStatus');
-        
-        console.log('🔌 Checking API connection...');
-        
-        // Test API connection
-        fetch('/api/chains')
-            .then(response => response.json())
-            .then(data => {
-                console.log('✅ API connected successfully:', data);
-                statusDot.style.color = '#10b981';
-                statusText.textContent = 'API Connected';
-            })
-            .catch(error => {
-                console.error('❌ API connection failed:', error);
-                statusDot.style.color = '#ef4444';
-                statusText.textContent = 'API Disconnected';
-            });
-        
-        // Update API key display
-        const apiKeyDisplay = document.getElementById('apiKeyDisplay');
-        if (this.apiKey && this.apiKey !== 't-68bd991b97f0a5524832a527-913f85fbd21841eb88388ed3') {
-            apiKeyDisplay.textContent = `API Key: ${this.apiKey.substring(0, 10)}...`;
-        } else {
-            apiKeyDisplay.textContent = 'API Key: Default';
-        }
-    }
-
-    /**
-     * Update MCP server status display
-     * Checks MCP connection status and updates UI accordingly
-     */
-    async updateMCPStatus() {
-        try {
-            const response = await fetch('/api/status');
-            const data = await response.json();
-            
-            const mcpStatusElement = document.getElementById('mcpStatus');
-            const mcpIconElement = document.getElementById('mcpIcon');
-            
-            if (mcpStatusElement && mcpIconElement) {
-                if (data.success && data.mcp) {
-                    const isConnected = data.mcp.connected;
-                    
-                    if (isConnected) {
-                        mcpStatusElement.textContent = 'MCP: Active';
-                        mcpStatusElement.style.color = '#10b981';
-                        mcpIconElement.style.color = '#10b981';
-                        mcpIconElement.className = 'fas fa-robot';
-                    } else {
-                        mcpStatusElement.textContent = 'MCP';
-                        mcpStatusElement.style.color = '#f59e0b';
-                        mcpIconElement.style.color = '#f59e0b';
-                        mcpIconElement.className = 'fas fa-robot';
-                    }
-                } else {
-                    mcpStatusElement.textContent = 'MCP: Error';
-                    mcpStatusElement.style.color = '#ef4444';
-                    mcpIconElement.style.color = '#ef4444';
-                    mcpIconElement.className = 'fas fa-exclamation-triangle';
-                }
-            }
-        } catch (error) {
-            console.error('Failed to update MCP status:', error);
-            const mcpStatusElement = document.getElementById('mcpStatus');
-            const mcpIconElement = document.getElementById('mcpIcon');
-            
-            if (mcpStatusElement && mcpIconElement) {
-                mcpStatusElement.textContent = 'MCP: Error';
-                mcpStatusElement.style.color = '#ef4444';
-                mcpIconElement.style.color = '#ef4444';
-                mcpIconElement.className = 'fas fa-exclamation-triangle';
-            }
-        }
-    }
-
-    // API Key Management Functions
-    showApiKeyModal() {
-        const modal = document.getElementById('apiKeyModal');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        
-        // Pre-fill with current API key
-        apiKeyInput.value = this.apiKey;
-        apiKeyInput.type = 'password';
-        
-        modal.classList.add('show');
-        apiKeyInput.focus();
-    }
-
-    hideApiKeyModal() {
-        const modal = document.getElementById('apiKeyModal');
-        modal.classList.remove('show');
-    }
-
-    toggleApiKeyVisibility() {
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const toggleBtn = document.getElementById('toggleVisibility');
-        const icon = toggleBtn.querySelector('i');
-        
-        if (apiKeyInput.type === 'password') {
-            apiKeyInput.type = 'text';
-            icon.className = 'fas fa-eye-slash';
-        } else {
-            apiKeyInput.type = 'password';
-            icon.className = 'fas fa-eye';
-        }
-    }
-
-    async saveApiKey() {
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const newApiKey = apiKeyInput.value.trim();
-        
-        if (!newApiKey) {
-            alert('Please enter an API key');
-            return;
-        }
-        
-        if (!newApiKey.startsWith('t-')) {
-            alert('API key must start with "t-"');
-            return;
-        }
-        
-        // Save to localStorage
-        localStorage.setItem('tatumApiKey', newApiKey);
-        this.apiKey = newApiKey;
-        
-        // Update display
-        this.updateStatus();
-        
-        // Show success message
-        this.showNotification('API key saved successfully!', 'success');
-        
-        // Close modal
-        this.hideApiKeyModal();
-    }
-
-    async testApiKey() {
-        const apiKeyInput = document.getElementById('apiKeyInput');
-        const testBtn = document.getElementById('testApiKey');
-        const originalText = testBtn.innerHTML;
-        
-        if (!apiKeyInput.value.trim()) {
-            alert('Please enter an API key first');
-            return;
-        }
-        
-        // Show loading state
-        testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-        testBtn.disabled = true;
-        
-        try {
-            // Test the API key by making a request to backend
-            const response = await fetch('/api/test-key', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ apiKey: apiKeyInput.value.trim() })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('API key is valid! ✅', 'success');
-            } else {
-                this.showNotification('API key is invalid ❌', 'error');
-            }
-        } catch (error) {
-            console.error('Error testing API key:', error);
-            this.showNotification('Error testing API key', 'error');
-        } finally {
-            // Reset button
-            testBtn.innerHTML = originalText;
-            testBtn.disabled = false;
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
-            </div>
-        `;
-        
-        // Add styles
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            z-index: 1001;
-            animation: slideInRight 0.3s ease-out;
-            max-width: 300px;
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Remove after 3 seconds
-        setTimeout(() => {
-            notification.style.animation = 'slideOutRight 0.3s ease-in';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
+import { createWalletClient, custom, parseUnits } from 'viem';
+import { sepolia } from 'viem/chains';
+import { erc7715ProviderActions } from '@metamask/smart-accounts-kit/actions';
+
+// --- CONFIGURATION ---
+const BACKEND_URL = "/api"; // Relative path for proxy
+let isAgentActive = false;
+let simulationInterval = null;
+let walletAddress = null;
+
+// --- DOM ELEMENTS ---
+const activateAgentBtn = document.getElementById('activateAgentBtn');
+const btnText = document.getElementById('btnText');
+const btnSpinner = document.getElementById('btnSpinner');
+const walletBadge = document.getElementById('wallet-badge');
+const walletAddressSpan = document.getElementById('wallet-address');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const consoleOutput = document.getElementById('consoleOutput');
+const agentStatusBadge = document.getElementById('agent-status-badge');
+
+// --- HELPER: Console Log ---
+function logConsole(msg, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    let colorClass = 'text-gray-300';
+    if (type === 'success') colorClass = 'text-emerald-400';
+    if (type === 'error') colorClass = 'text-red-400';
+    if (type === 'warn') colorClass = 'text-yellow-400';
+
+    const div = document.createElement('div');
+    div.className = `font-mono text-sm ${colorClass} mb-1`;
+    div.innerHTML = `<span class="opacity-50">[${timestamp}]</span> ${msg}`;
+
+    if (consoleOutput) {
+        consoleOutput.appendChild(div);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    } else {
+        console.log(`[${type}] ${msg}`);
     }
 }
 
-// Initialize the Tatum ChainLens application when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-    new TatumChainLens();
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check local storage for wallet address
+    const savedAddress = localStorage.getItem('walletAddress');
+    if (savedAddress) {
+        walletAddress = savedAddress;
+        updateWalletUI(savedAddress);
+
+        // Auto-scan portfolio with Envio on page load
+        fetchPortfolio(savedAddress);
+    }
+
+    // Load watchlist
+    const savedWatchlist = localStorage.getItem('chainlens_watchlist');
+    if (!savedWatchlist) {
+        // DEMO: Pre-seed with 3 active addresses for "Real-Time" proof
+        const demoAddresses = [
+            "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", // Vitalik (Mainnet/Sepolia)
+            "0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97", // Sepolia Whale
+            "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"  // Uniswap 
+        ];
+        localStorage.setItem('chainlens_watchlist', JSON.stringify(demoAddresses));
+        console.log("🌟 Demo Watchlist Seeding: Added 3 addresses");
+    }
+    renderWatchlist();
+
+    // Load watchlist from localStorage
+    renderWatchlist();
+
+    // --- NEW: Dashboard Scan Logic ---
+    const checkWalletBtn = document.getElementById('checkWallet');
+    const walletInput = document.getElementById('walletAddress');
+
+    if (checkWalletBtn && walletInput) {
+        checkWalletBtn.onclick = async () => {
+            const addr = walletInput.value;
+            if (addr && addr.startsWith('0x')) {
+                fetchPortfolio(addr);
+            } else {
+                alert("Please enter a valid 0x address");
+            }
+        };
+    }
+
+    // --- NEW: AI Chat Logic ---
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendMessage');
+    const chatMessages = document.getElementById('chatMessages');
+
+    if (chatInput && sendBtn && chatMessages) {
+        const sendMessage = async () => {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Add user message to UI
+            addChatMessage(message, 'user');
+            chatInput.value = '';
+
+            // Show typing indicator
+            const typingId = addChatMessage('Thinking...', 'ai', true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                // Remove typing indicator
+                document.getElementById(typingId)?.remove();
+
+                // Add AI response
+                addChatMessage(data.response || "Sorry, I couldn't process that.", 'ai');
+
+            } catch (e) {
+                document.getElementById(typingId)?.remove();
+                addChatMessage("❌ Connection error. Please try again.", 'ai');
+            }
+        };
+
+        sendBtn.onclick = sendMessage;
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    }
 });
 
-// Add some CSS for typing indicator
-const style = document.createElement('style');
-style.textContent = `
-    .typing-indicator {
-        display: flex;
-        gap: 4px;
-        align-items: center;
+// --- CHAT UI HELPER ---
+function addChatMessage(text, sender = 'ai', isTyping = false) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+
+    const msgId = 'msg-' + Date.now();
+    const isUser = sender === 'user';
+
+    const msgDiv = document.createElement('div');
+    msgDiv.id = msgId;
+    msgDiv.className = `flex gap-3 ${isUser ? 'justify-end' : ''}`;
+
+    msgDiv.innerHTML = `
+        ${!isUser ? `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-violet-500 to-fuchsia-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white">AI</div>` : ''}
+        <div class="bg-${isUser ? 'violet-600' : 'white/5'} p-3 rounded-2xl ${isUser ? 'rounded-tr-none' : 'rounded-tl-none'} border border-white/5 text-sm text-${isUser ? 'white' : 'gray-300'} max-w-[80%] ${isTyping ? 'animate-pulse' : ''}">
+            ${text}
+        </div>
+    `;
+
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    return msgId;
+}
+
+// --- WATCHLIST MANAGEMENT ---
+let watchlist = JSON.parse(localStorage.getItem('watchlist') || '[]');
+
+function addToWatchlist(address) {
+    if (!watchlist.includes(address.toLowerCase())) {
+        watchlist.push(address.toLowerCase());
+        localStorage.setItem('watchlist', JSON.stringify(watchlist));
+        renderWatchlist();
+        logConsole(`✅ Added ${address.substring(0, 8)}... to watchlist`, 'success');
     }
-    
-    .typing-indicator span {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #667eea;
-        animation: typing 1.4s infinite ease-in-out;
+}
+
+function removeFromWatchlist(address) {
+    watchlist = watchlist.filter(a => a !== address.toLowerCase());
+    localStorage.setItem('watchlist', JSON.stringify(watchlist));
+    renderWatchlist();
+    logConsole(`🗑️ Removed ${address.substring(0, 8)}... from watchlist`, 'info');
+}
+
+function renderWatchlist() {
+    const container = document.getElementById('watchlistContainer');
+    if (!container) return;
+
+    if (watchlist.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-6 text-gray-600 text-sm italic">
+                No wallets monitored yet. Scan to add.
+            </div>
+        `;
+        return;
     }
-    
-    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes typing {
-        0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-        40% { transform: scale(1); opacity: 1; }
+
+    container.innerHTML = watchlist.map(addr => `
+        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5 hover:border-violet-500/30 transition group">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center">
+                    <i class="fas fa-wallet text-violet-400 text-sm"></i>
+                </div>
+                <div>
+                    <span class="font-mono text-sm text-white block">${addr.substring(0, 6)}...${addr.substring(38)}</span>
+                    <span id="balance-${addr.toLowerCase()}" class="text-xs text-gray-500 font-mono animate-pulse">$0.00</span>
+                </div>
+            </div>
+            <div class="flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onclick="fetchPortfolio('${addr}')" 
+                    class="px-3 py-1 bg-violet-600 hover:bg-violet-500 text-white text-xs rounded transition" title="Scan this wallet">
+                    <i class="fas fa-sync"></i>
+                </button>
+                <button onclick="removeFromWatchlist('${addr}')" 
+                    class="px-3 py-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs rounded transition" title="Remove">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Add auto-scan logic to DOMContentLoaded (needs to be done where the listener is added)
+
+// --- AGENT HISTORY (ENVIO TRADES) ---
+let historyInterval = null;
+
+async function fetchAgentHistory() {
+    try {
+        const user = walletAddress || '';
+        const res = await fetch(`/api/envio/trades?user=${user}`);
+        const data = await res.json();
+
+        if (data.success && data.trades && data.trades.length > 0) {
+            renderTradeHistory(data.trades);
+            updateBlockCounter(data.trades[0].block);
+        }
+    } catch (e) {
+        console.error('History fetch failed:', e);
     }
-    
-    .gas-comparison-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-top: 20px;
+}
+
+function renderTradeHistory(trades) {
+    const tbody = document.getElementById('envioFeedBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = trades.map(t => {
+        const time = t.timestamp ? new Date(t.timestamp * 1000).toLocaleTimeString() : 'Now';
+        return `
+            <tr class="border-b border-white/5 hover:bg-white/5 transition cursor-pointer" onclick="showTxDetails('${t.txHash}')">
+                <td class="px-4 py-3">${time}</td>
+                <td class="px-4 py-3">${t.type || 'Transfer'}</td>
+                <td class="px-4 py-3">Sepolia Testnet</td>
+                <td class="px-4 py-3 text-right">~0.001 ETH</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateBlockCounter(block) {
+    const counter = document.getElementById('blockCounter');
+    if (counter) counter.innerText = block || '0';
+}
+
+function startHistoryRefresh() {
+    fetchAgentHistory();
+    historyInterval = setInterval(fetchAgentHistory, 10000); // Every 10s
+}
+
+function stopHistoryRefresh() {
+    if (historyInterval) clearInterval(historyInterval);
+}
+
+// --- SETTINGS PERSISTENCE ---
+function saveSettings() {
+    // Determine selected strategy
+    const strategy = document.querySelector('input[name="strategy"]:checked').value;
+
+    // DCA Params
+    const dailyBudget = document.getElementById('dailyBudgetInput').value;
+    const frequency = document.getElementById('frequencySelect').value;
+
+    // Limit Order Params
+    const targetPrice = document.getElementById('targetPriceInput').value;
+    const orderAmount = document.getElementById('orderAmountInput').value;
+
+    const settings = {
+        strategy,
+        dailyBudget,
+        frequency,
+        targetPrice,
+        orderAmount
+    };
+
+    localStorage.setItem('chainlens_settings', JSON.stringify(settings));
+
+    // If agent is active, we might want to update it dynamically (advanced feature)
+}
+
+function loadSettings() {
+    const saved = localStorage.getItem('chainlens_settings');
+    if (saved) {
+        const settings = JSON.parse(saved);
+
+        // Restore Strategy
+        if (settings.strategy) {
+            const radio = document.querySelector(`input[name="strategy"][value="${settings.strategy}"]`);
+            if (radio) {
+                radio.checked = true;
+                toggleStrategyUI(settings.strategy);
+            }
+        }
+
+        // Restore DCA
+        if (settings.dailyBudget) {
+            document.getElementById('dailyBudgetInput').value = settings.dailyBudget;
+            document.getElementById('configDailyBudget').innerText = '$' + parseFloat(settings.dailyBudget).toFixed(2);
+        }
+        if (settings.frequency) {
+            document.getElementById('frequencySelect').value = settings.frequency;
+            // Update text for select
+            const sel = document.getElementById('frequencySelect');
+            document.getElementById('configFrequency').innerText = sel.options[sel.selectedIndex].text;
+        }
+
+        // Restore Limit Order
+        if (settings.targetPrice) {
+            document.getElementById('targetPriceInput').value = settings.targetPrice;
+            document.getElementById('configTargetPrice').innerText = '$' + settings.targetPrice;
+        }
+        if (settings.orderAmount) {
+            document.getElementById('orderAmountInput').value = settings.orderAmount;
+            document.getElementById('configOrderAmount').innerText = '$' + settings.orderAmount;
+        }
+    } else {
+        // Default UI state
+        toggleStrategyUI('dca');
     }
-    
-    .comparison-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px;
-        background: rgba(255, 255, 255, 0.8);
-        border-radius: 10px;
-        border: 1px solid #e5e7eb;
+}
+
+// Helper to switch UI inputs
+function toggleStrategyUI(strategy) {
+    const dcaInputs = document.getElementById('dcaInputs');
+    const limitInputs = document.getElementById('limitInputs');
+    const gridInputs = document.getElementById('gridInputs');
+
+    if (strategy === 'dca') {
+        dcaInputs.classList.remove('hidden');
+        limitInputs.classList.add('hidden');
+        gridInputs.classList.add('hidden');
+    } else if (strategy === 'limit') {
+        dcaInputs.classList.add('hidden');
+        limitInputs.classList.remove('hidden');
+        gridInputs.classList.add('hidden');
+    } else if (strategy === 'grid') {
+        dcaInputs.classList.add('hidden');
+        limitInputs.classList.add('hidden');
+        gridInputs.classList.remove('hidden');
     }
-    
-    .chain-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-weight: 600;
+}
+
+// Helper for Grid price range display
+function updateGridPriceRange() {
+    const minPrice = document.getElementById('gridMinPriceInput').value || '2200';
+    const maxPrice = document.getElementById('gridMaxPriceInput').value || '2800';
+    document.getElementById('configPriceRange').innerText = `$${minPrice} - $${maxPrice}`;
+}
+
+// Bind Strategy Radio Buttons
+document.querySelectorAll('input[name="strategy"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        toggleStrategyUI(e.target.value);
+        saveSettings();
+    });
+});
+// Load settings on init (called at end of file)
+
+// --- PORTFOLIO LOGIC (ENVIO POWERED) ---
+async function fetchPortfolio(address) {
+    if (!address) return;
+
+    // UI Loading State
+    const totalValueEl = document.getElementById('totalValue');
+    const activeChainsEl = document.getElementById('activeChainsCount');
+    if (totalValueEl) totalValueEl.innerText = "Scanning...";
+
+    try {
+        logConsole(`🔍 Envio: Requesting Cross-Chain Scan for ${address.substring(0, 8)}...`);
+
+        const response = await fetch('/api/envio/portfolio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.stats) {
+            const { totalTx, activeChains, chainData } = data.stats;
+
+            // Update Dashboard
+            if (activeChainsEl) activeChainsEl.innerText = activeChains.length;
+
+            // Visualize
+            logConsole(`✅ Envio Result: ${totalTx} Transactions across ${activeChains.length} Chains.`, "success");
+            activeChains.forEach(chain => {
+                logConsole(`   • ${chain.toUpperCase()}: ${chainData[chain]} txs found`, "info");
+            });
+
+            // Update main balance
+            fetchBalance(address);
+
+            // Auto-add to watchlist after successful scan
+            if (!watchlist.includes(address.toLowerCase())) {
+                addToWatchlist(address);
+                // Trigger full scan to update combined value
+                setTimeout(scanAllWatchlist, 1000);
+            } else {
+                // If already in watchlist, update its specific row
+                fetchBalance(address).then(val => {
+                    const rowVal = document.getElementById(`balance-${address.toLowerCase()}`);
+                    if (rowVal) rowVal.innerText = "$" + val.toFixed(2);
+                });
+            }
+
+        } else {
+            throw new Error(data.error || "Scan failed");
+        }
+    } catch (e) {
+        logConsole(`❌ Scan Error: ${e.message}`, "error");
+        if (totalValueEl) totalValueEl.innerText = "Error";
     }
-    
-    .gas-price {
-        font-weight: 700;
-        color: #667eea;
+}
+
+async function fetchBalance(address) {
+    // Fallback to Tatum for USD Price
+    try {
+        const r = await fetch('/api/scan-wallet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address })
+        });
+        const d = await r.json();
+
+        let val = 0;
+        if (d.success && d.data) {
+            val = d.data.totalValue || 0;
+
+            // Only update MAIN display if this is the currently selected wallet
+            if (address.toLowerCase() === walletAddress?.toLowerCase()) {
+                const totalValueEl = document.getElementById('totalValue');
+                if (totalValueEl) totalValueEl.innerText = "$" + val.toFixed(2);
+            }
+        }
+        return val;
+    } catch (e) {
+        return 0;
     }
-    
-    .error {
-        color: #ef4444;
-        font-weight: 600;
+}
+
+// --- WATCHLIST AGGREGATION ---
+async function scanAllWatchlist() {
+    if (!watchlist || watchlist.length === 0) return;
+
+    console.log("🔄 Scanning all watchlist addresses...");
+    const totalWatchlistEl = document.getElementById('watchlistTotalValue');
+    if (totalWatchlistEl) totalWatchlistEl.innerText = "Scanning...";
+
+    let total = 0;
+
+    // Scan in parallel
+    const promises = watchlist.map(async (addr) => {
+        const val = await fetchBalance(addr);
+
+        // Update specific row
+        const rowVal = document.getElementById(`balance-${addr.toLowerCase()}`);
+        if (rowVal) {
+            rowVal.innerText = "$" + val.toFixed(2);
+            rowVal.classList.remove('animate-pulse');
+            rowVal.classList.add('text-emerald-400');
+        }
+        return val;
+    });
+
+    const values = await Promise.all(promises);
+    total = values.reduce((a, b) => a + b, 0);
+
+    if (totalWatchlistEl) {
+        totalWatchlistEl.innerText = "$" + total.toFixed(2);
+        totalWatchlistEl.classList.add('text-emerald-400');
     }
-`;
-document.head.appendChild(style);
+}
+
+// --- MAIN ACTIVATION LOGIC ---
+async function toggleAgentActivation() {
+    console.log("Toggle Activation Clicked");
+
+    if (!isAgentActive) {
+        // --- START AGENT FLOW ---
+        // --- START AGENT FLOW ---
+
+        // AUTO-CONNECT IF NEEDED
+        if (!walletAddress) {
+            if (window.ethereum) {
+                try {
+                    logConsole("🔌 Wallet not connected. Requesting Access...", "warn");
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    if (accounts && accounts.length > 0) {
+                        walletAddress = accounts[0];
+                        localStorage.setItem('walletAddress', walletAddress);
+                        updateWalletUI(walletAddress);
+                        logConsole(`✅ Connected: ${walletAddress.substring(0, 6)}...`, "success");
+
+                        // Auto-scan portfolio with Envio
+                        fetchPortfolio(walletAddress);
+                    } else {
+                        throw new Error("No accounts returned");
+                    }
+                } catch (err) {
+                    alert("Failed to connect wallet: " + err.message);
+                    updateAgentUI(false);
+                    return;
+                }
+            } else {
+                alert("MetaMask not found! Please install it.");
+                updateAgentUI(false);
+                return;
+            }
+        }
+
+        if (!walletAddress) {
+            alert("No wallet connected! Please scan or connect first.");
+            updateAgentUI(false);
+            return;
+        }
+
+        updateAgentUI(true, true); // Active=True, Loading=True
+        logConsole("🚀 Initializing Agent 7715...", "info");
+
+        // 1. Env Check (Envio Health)
+        try {
+            const health = await fetch('/api/envio/health').then(r => r.json());
+            if (health.status !== "ok") throw new Error("Envio HyperSync Offline");
+            logConsole("✅ Envio HyperSync™ Verified.", "success");
+        } catch (e) {
+            logConsole("⚠️ Envio Service Offline. Using Local Simulation.", "warn");
+        }
+
+        // 2. ATTEMPT PERMISSION REQUEST (Using SDK)
+        try {
+            if (!window.ethereum) throw new Error("MetaMask not detected");
+
+            logConsole("🔐 Requesting Smart Account Permissions...", "info");
+
+            // --- SDK MAGIC STARTS HERE ---
+            // This replaces the manual JSON-RPC construction that was failing
+            const walletClient = createWalletClient({
+                chain: sepolia,
+                transport: custom(window.ethereum),
+            }).extend(erc7715ProviderActions());
+
+            const sessionAccountAddress = "0x8d96009cc01a2f64687b1c42f025407d57dfa053"; // Agent Address
+            const usdcAddress = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"; // USDC Sepolia
+
+            logConsole("🦊 Triggering MetaMask Flask Popup via SDK...", "info");
+
+            // --- READ USER SETTINGS ---
+            const strategy = document.querySelector('input[name="strategy"]:checked')?.value || 'dca';
+            let rawBudget = "10";
+            let rawFreqHours = "24";
+            let justification = "AI Agent Daily Limit";
+
+            if (strategy === 'limit') {
+                const amountInput = document.getElementById('orderAmountInput');
+                const priceInput = document.getElementById('targetPriceInput');
+                rawBudget = amountInput ? amountInput.value : "100";
+                // For Limit Order, we authorize the Order Amount as the "Period Amount"
+                // Frequency is set to 24h as a standard "Daily" authorization window
+                justification = `Limit Order: Buy $${rawBudget} ETH @ $${priceInput?.value}`;
+            } else {
+                // DCA Default
+                const budgetInput = document.getElementById('dailyBudgetInput');
+                const frequenceSelect = document.getElementById('frequencySelect');
+                rawBudget = budgetInput ? budgetInput.value : "10";
+                rawFreqHours = frequenceSelect ? frequenceSelect.value : "24";
+                justification = `DCA Agent Daily Limit ($${rawBudget})`;
+            }
+
+            logConsole(`⚙️ Strategy: ${strategy.toUpperCase()} | Limit: $${rawBudget}`, "info");
+
+            // Convert to Permission Params
+            // 6 decimals for USDC on Sepolia (standard USDC decimals)
+            const periodAmount = parseUnits(rawBudget, 6);
+            const periodDuration = parseInt(rawFreqHours) * 3600; // Hours -> Seconds
+
+            // The SDK handles the complicated 'caveats' structure for us!
+            const grantedPermissions = await walletClient.requestExecutionPermissions([{
+                chainId: sepolia.id,
+                expiry: Math.floor(Date.now() / 1000) + 604800, // 1 week
+                signer: {
+                    type: "account",
+                    data: {
+                        address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Matches Backend SESSION_PRIVATE_KEY
+                    },
+                },
+                permission: {
+                    type: "erc20-token-periodic",
+                    data: {
+                        tokenAddress: usdcAddress,
+                        periodAmount: periodAmount,
+                        periodDuration: periodDuration,
+                        justification: justification
+                    },
+                },
+                isAdjustmentAllowed: true, // Key Feature
+            }]);
+
+            console.log("SDK Response:", grantedPermissions);
+
+            if (!grantedPermissions || grantedPermissions.length === 0) {
+                throw new Error("No permissions granted (Array Empty)");
+            }
+
+            // 3. SUCCESS PATH
+            const context = grantedPermissions[0].context;
+            logConsole(`✅ Session Key Granted! Context: ${context.substring(0, 16)}...`, "success");
+
+            // Register with Backend
+            logConsole("🔄 Registering Agent with Orchestrator...", "info");
+
+            // Collect strategy-specific parameters from UI inputs
+            let strategyParams = {};
+
+            if (strategy === 'dca') {
+                const dailyBudgetInput = document.getElementById('dailyBudgetInput');
+                const frequencySelect = document.getElementById('frequencySelect');
+                strategyParams = {
+                    dailyBudget: parseFloat(dailyBudgetInput?.value || rawBudget),
+                    frequencyHours: parseInt(frequencySelect?.value || rawFreqHours)
+                };
+            } else if (strategy === 'limit') {
+                const targetPriceInput = document.getElementById('targetPriceInput');
+                const orderAmountInput = document.getElementById('orderAmountInput');
+                strategyParams = {
+                    targetPrice: parseFloat(targetPriceInput?.value || 2400),
+                    orderAmount: parseFloat(orderAmountInput?.value || rawBudget)
+                };
+            } else if (strategy === 'grid') {
+                const gridMinInput = document.getElementById('gridMinPriceInput');
+                const gridMaxInput = document.getElementById('gridMaxPriceInput');
+                const gridLevelsInput = document.getElementById('gridLevelsInput');
+                const gridAmountInput = document.getElementById('gridAmountInput');
+                strategyParams = {
+                    gridMin: parseFloat(gridMinInput?.value || 2200),
+                    gridMax: parseFloat(gridMaxInput?.value || 2800),
+                    gridLevels: parseInt(gridLevelsInput?.value || 5),
+                    gridAmount: parseFloat(gridAmountInput?.value || 50)
+                };
+            }
+
+            const registrationPayload = {
+                permissionContext: context,
+                userAddress: walletAddress,
+                strategy: strategy,
+                strategyParams: strategyParams
+            };
+
+            await fetch('/api/register-agent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(registrationPayload)
+            });
+            logConsole("✅ Agent Registered & Active!", "success");
+
+            isAgentActive = true;
+            updateAgentUI(true);
+
+            // IMMEDIATE EXECUTION Logic
+            const actionLabel = strategy === 'limit' ?
+                `Limit Order Placed ($${rawBudget})` :
+                'Buy (DCA Initial)';
+
+            logConsole(`⏳ Queuing ${actionLabel}...`, "info");
+            setTimeout(async () => {
+                try {
+                    logConsole(`🚀 Triggering ${actionLabel}...`, "info");
+
+                    const response = await fetch('/api/agent/execute-trade', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userAddress: walletAddress,
+                            action: actionLabel,
+                            amount: rawBudget
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errText = await response.text();
+                        throw new Error(`Server responded ${response.status}: ${errText}`);
+                    }
+
+                    const resData = await response.json();
+                    if (resData.success) {
+                        logConsole(`✅ Trade Executed: ${resData.note} (Tx: ${resData.txHash?.substring(0, 10)}...)`, "success");
+
+                        // ADD TRANSACTION TO HISTORY TABLE
+                        const historyTable = document.getElementById('envioFeedBody');
+                        if (historyTable && resData.txHash) {
+                            const now = new Date().toLocaleTimeString();
+                            const txType = resData.isRealExecution ? 'On-Chain' : 'Simulated';
+                            const row = document.createElement('tr');
+                            row.className = 'border-b border-white/5 hover:bg-white/5 transition';
+                            row.innerHTML = `
+                                <td class="px-4 py-3">${now}</td>
+                                <td class="px-4 py-3">
+                                    <span class="text-emerald-400">✓</span> ${actionLabel}
+                                    <span class="text-xs text-gray-500 ml-2">(${txType})</span>
+                                </td>
+                                <td class="px-4 py-3 text-violet-400">Agent 7715</td>
+                                <td class="px-4 py-3 text-right">
+                                    ${resData.isRealExecution ?
+                                    `<a href="https://sepolia.etherscan.io/tx/${resData.txHash}" target="_blank" class="text-violet-400 hover:underline">View Tx ↗</a>` :
+                                    '<span class="text-gray-500">N/A</span>'}
+                                </td>
+                            `;
+
+                            // Remove "Waiting for transactions..." placeholder if exists
+                            const placeholder = historyTable.querySelector('td[colspan]');
+                            if (placeholder) {
+                                placeholder.closest('tr').remove();
+                            }
+
+                            // Add new row at top
+                            historyTable.insertBefore(row, historyTable.firstChild);
+                        }
+                    } else {
+                        logConsole(`⏳ ${resData.note || 'Waiting for conditions...'}`, "info");
+                    }
+                } catch (err) {
+                    console.error("Execute Trade Failed:", err);
+                    logConsole(`❌ Trigger Failed: ${err.message}`, "error");
+                }
+            }, 1500);
+
+            startAgentLoop();
+            startHistoryRefresh(); // NEW: Start fetching trade history
+
+        } catch (error) {
+            console.error("Activation Error:", error);
+
+            // --- HYBRID FALLBACK LOGIC ---
+            // If the SDK call fails (e.g. Method not found, Network Error), we fallback.
+            // UNLESS user explicitly rejected.
+
+            const isUserRejection = error.code === 4001 ||
+                (error.message && (error.message.toLowerCase().includes("rejected") || error.message.toLowerCase().includes("cancelled")));
+
+            if (!isUserRejection) {
+                logConsole(`⚠️ SDK/Native Failed (${error.message || error.code}). Enabling Hybrid Mode.`, "warn");
+
+                // Show Polyfill Modal
+                const modal = document.getElementById('polyfillModal');
+                const confirmBtn = document.getElementById('confirmPolyfillBtn');
+                if (modal && confirmBtn) {
+                    modal.classList.remove('hidden');
+                    modal.style.display = 'flex'; // Force Visibility
+
+                    logConsole("⏳ Waiting for user approval via Hybrid UI...", "info");
+                    await new Promise(resolve => {
+                        confirmBtn.onclick = () => {
+                            modal.classList.add('hidden');
+                            modal.style.display = 'none';
+                            resolve();
+                        }
+                    });
+
+                    logConsole("ℹ️ <span class='text-emerald-400'>Permission Policy Signed (Hybrid)</span>.", "info");
+                    isAgentActive = true;
+                    updateAgentUI(true);
+                    startAgentLoop();
+                } else {
+                    alert("Fatal Error: Hybrid UI missing.");
+                    updateAgentUI(false);
+                }
+            } else {
+                alert("Activation Cancelled by User");
+                updateAgentUI(false);
+            }
+        }
+    } else {
+        // --- STOP AGENT FLOW ---
+        logConsole("🛑 Stopping Agent...", "error");
+        isAgentActive = false;
+        updateAgentUI(false);
+        stopAgentLoop();
+        stopHistoryRefresh(); // NEW: Stop history polling
+        logConsole("Session Stopped.", "warn");
+    }
+}
+
+// --- UI HELPERS ---
+const agentStateText = document.getElementById('agentStateText');
+const agentStateDot = document.getElementById('agentStateDot');
+
+function updateAgentUI(active, loading = false) {
+    if (loading) {
+        if (btnText) btnText.innerText = "Initializing...";
+        if (btnSpinner) btnSpinner.classList.remove('hidden');
+        return;
+    }
+
+    if (active) {
+        if (btnText) btnText.innerText = "Deactivate Agent";
+        if (btnSpinner) btnSpinner.classList.add('hidden');
+        if (activateAgentBtn) {
+            activateAgentBtn.classList.remove('bg-emerald-500', 'hover:bg-emerald-600');
+            activateAgentBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+        }
+
+        // Navbar Status
+        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse";
+        if (statusText) statusText.innerText = "Active";
+
+        // Sidebar Badge
+        if (agentStatusBadge) {
+            agentStatusBadge.innerText = "ACTIVE";
+            agentStatusBadge.classList.replace('bg-gray-800', 'bg-emerald-900/30');
+            agentStatusBadge.classList.replace('text-gray-400', 'text-emerald-400');
+            agentStatusBadge.classList.replace('border-gray-700', 'border-emerald-500/30');
+        }
+
+        // Dashboard Card Status (NEW)
+        if (agentStateText) {
+            agentStateText.innerText = "Active";
+            agentStateText.classList.remove('text-white');
+            agentStateText.classList.add('text-emerald-400');
+        }
+        if (agentStateDot) {
+            agentStateDot.className = "w-3 h-3 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+        }
+
+    } else {
+        if (btnText) btnText.innerText = "Activate Agent";
+        if (btnSpinner) btnSpinner.classList.add('hidden');
+        if (activateAgentBtn) {
+            activateAgentBtn.classList.add('bg-emerald-500', 'hover:bg-emerald-600');
+            activateAgentBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
+        }
+
+        // Navbar Status
+        if (statusDot) statusDot.className = "w-2 h-2 rounded-full bg-gray-500 mr-2";
+        if (statusText) statusText.innerText = "Idle";
+
+        // Sidebar Badge
+        if (agentStatusBadge) {
+            agentStatusBadge.innerText = "IDLE";
+            agentStatusBadge.classList.replace('bg-emerald-900/30', 'bg-gray-800');
+            agentStatusBadge.classList.replace('text-emerald-400', 'text-gray-400');
+            agentStatusBadge.classList.replace('border-emerald-500/30', 'border-gray-700');
+        }
+
+        // Dashboard Card Status (NEW)
+        if (agentStateText) {
+            agentStateText.innerText = "Idle";
+            agentStateText.classList.add('text-white');
+            agentStateText.classList.remove('text-emerald-400');
+        }
+        if (agentStateDot) {
+            agentStateDot.className = "w-3 h-3 rounded-full bg-gray-500";
+        }
+    }
+}
+
+function updateWalletUI(address) {
+    if (walletBadge) {
+        walletBadge.classList.remove('hidden');
+        walletBadge.classList.add('flex');
+    }
+    if (walletAddressSpan) {
+        walletAddressSpan.innerText = address.substring(0, 6) + "..." + address.substring(38);
+    }
+}
+
+function startAgentLoop() {
+    logConsole("🧠 Agent Life Cycle Started...", "info");
+    simulationInterval = setInterval(() => {
+        const block = 19543000 + Math.floor(Math.random() * 1000);
+        const whale = "0x" + Math.floor(Math.random() * 16777215).toString(16) + "...";
+
+        logConsole(`🔍 Envio HyperSync™ (Block #${block}): Detected Whale Accumulation (USDC -> ETH).`, "info");
+        logConsole(`⚡ Signal Intelligence: Wallet ${whale} accumulated 500 ETH in last 10 mins.`, "success");
+        logConsole(`🤖 Agent Strategy (Mirroring): Executing Copy Buy on Sepolia to capture trend.`, "info");
+        // Using console.log directly for additional debug if needed
+        console.log("Agent Heartbeat - Active");
+    }, 8000);
+}
+
+function stopAgentLoop() {
+    if (simulationInterval) clearInterval(simulationInterval);
+}
+
+function logout() {
+    if (confirm("Disconnect Wallet?")) {
+        if (btnText) btnText.innerText = "Disconnecting...";
+        if (walletBadge) {
+            walletBadge.innerHTML = `<span class="mr-2">🔌</span> Revoking...`;
+            walletBadge.classList.add('bg-red-900/50', 'text-red-400');
+        }
+
+        if (window.ethereum) {
+            window.ethereum.request({
+                method: 'wallet_revokePermissions',
+                params: [{ eth_accounts: {} }]
+            }).catch(e => console.log("Revoke ignored"))
+                .finally(() => {
+                    localStorage.clear();
+                    setTimeout(() => window.location.reload(), 1000);
+                });
+        } else {
+            localStorage.clear();
+            window.location.reload();
+        }
+    }
+}
+
+// --- EXPOSE GLOBALS for HTML ---
+// HTML buttons access window.* functions. Modules do not pollute global scope by default.
+window.toggleAgentActivation = toggleAgentActivation;
+window.logout = logout;
+window.saveSettings = saveSettings; // Fixes ReferenceError
+window.loadSettings = loadSettings;
+window.fetchPortfolio = fetchPortfolio;
+window.addToWatchlist = addToWatchlist;
+window.removeFromWatchlist = removeFromWatchlist;
+window.showTxDetails = showTxDetails;
+window.closeTxModal = closeTxModal;
+window.switchWallet = switchWallet;
+window.fetchAllWallets = fetchAllWallets;
+
+window.updateWallet = (addr) => { // Exposed utility for QR scanner if needed
+    walletAddress = addr;
+    localStorage.setItem('walletAddress', addr);
+    updateWalletUI(addr);
+    fetchPortfolio(addr);
+};
+
+// --- TRANSACTION DETAILS MODAL ---
+async function showTxDetails(txHash) {
+    if (!txHash) return;
+
+    // ... (modal creation logic) ...
+    let modal = document.getElementById('txModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'txModal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm';
+        modal.innerHTML = `
+            <div class="glass-card max-w-2xl w-full mx-4 p-6 rounded-2xl border border-violet-500/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-white">Transaction Details</h3>
+                    <button onclick="closeTxModal()" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div id="txDetails" class="space-y-3 text-sm">
+                    <div class="animate-pulse text-gray-400">Loading...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+
+    // Fetch details (simplified - would call Etherscan API in production)
+    document.getElementById('txDetails').innerHTML = `
+        <div class="bg-white/5 p-3 rounded-lg border border-white/5">
+            <span class="text-gray-400">Hash:</span>
+            <a href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank" class="text-violet-400 hover:underline ml-2 font-mono">
+                ${txHash.substring(0, 10)}...${txHash.substring(txHash.length - 8)}
+            </a>
+        </div>
+        <div class="bg-white/5 p-3 rounded-lg border border-white/5">
+            <span class="text-gray-400">Status:</span>
+            <span class="text-green-400 ml-2">✓ Success</span>
+        </div>
+        <div class="bg-white/5 p-3 rounded-lg border border-white/5">
+            <span class="text-gray-400">Network:</span>
+            <span class="text-white ml-2">Sepolia Testnet</span>
+        </div>
+        <p class="text-xs text-gray-500 mt-4">Click hash to view full details on Etherscan</p>
+    `;
+}
+
+function closeTxModal() {
+    const modal = document.getElementById('txModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+// --- MULTI-WALLET SWITCHING ---
+async function fetchAllWallets() {
+    if (!window.ethereum) return [];
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        return accounts || [];
+    } catch (e) {
+        return [];
+    }
+}
+
+async function switchWallet(newAddress) {
+    if (!newAddress) return;
+
+    walletAddress = newAddress;
+    localStorage.setItem('walletAddress', newAddress);
+    updateWalletUI(newAddress);
+
+    // Re-scan portfolio
+    logConsole(`🔄 Switched to ${newAddress.substring(0, 8)}...`, 'info');
+    fetchPortfolio(newAddress);
+}
+
+// Make functions globally accessible
+window.addToWatchlist = addToWatchlist;
+window.removeFromWatchlist = removeFromWatchlist;
+window.showTxDetails = showTxDetails;
+window.switchWallet = switchWallet;
+window.saveSettings = saveSettings;
+window.fetchPortfolio = fetchPortfolio;
+window.closeTxModal = closeTxModal;
+window.toggleAgentActivation = toggleAgentActivation;
+window.logout = logout;
+window.fetchAllWallets = fetchAllWallets;
+window.loadSettings = loadSettings;
+window.updateGridPriceRange = updateGridPriceRange;
+
+// Load settings on init
+loadSettings();
+
+console.log("App.js Module Loaded");

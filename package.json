@@ -35,13 +35,16 @@
   "author": "Tatum ChainLens Team - MCP Hackathon 2025",
   "license": "MIT",
   "dependencies": {
+    "@envio-dev/hypersync-client": "^0.7.2",
     "@google/genai": "^1.20.0",
+    "@metamask/smart-accounts-kit": "^0.3.0",
     "axios": "^1.6.0",
     "concurrently": "^8.2.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "node-telegram-bot-api": "^0.64.0"
+    "node-telegram-bot-api": "^0.64.0",
+    "viem": "^2.43.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.0"

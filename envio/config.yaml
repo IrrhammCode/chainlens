@@ -1,0 +1,22 @@
+# yaml-language: $schema=./node_modules/envio/evm.schema.json
+name: agent-7715-indexer
+description: Agent 7715 Indexer - Tracks AgentSwapExecuted events from AgentRouter contract
+
+contracts:
+  - name: AgentRouter
+    abi: AgentRouter
+    events:
+      - event: "AgentSwapExecuted(address indexed user, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut, uint256 timestamp)"
+  - name: UniswapV3Pool
+    abi: UniswapV3Pool
+    events:
+      - event: "Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)"
+
+networks:
+  - id: 11155111 # ethereum-sepolia
+    start_block: 7300000 # Recent block to speed up syncing
+    contracts:
+      - name: AgentRouter
+        address: "0x08937bE70903b3ea4BA5D8FC8CA115401E1C1C6a" # Deployed AgentRouter
+      - name: UniswapV3Pool
+        address: "0x9799b5edc1aa7d3fad350309b08df3f64914e244" # Uniswap V3 USDC/WETH Pool

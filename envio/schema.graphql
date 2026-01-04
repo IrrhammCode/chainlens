@@ -1,0 +1,20 @@
+type UserTrade @entity {
+  id: ID!
+  user: Bytes! # address
+  tokenIn: Bytes! # address
+  tokenOut: Bytes! # address
+  amountIn: BigInt!
+  amountOut: BigInt!
+  timestamp: BigInt!
+  transactionHash: Bytes!
+  blockNumber: BigInt!
+}
+
+type TotalVolume @entity {
+  id: ID! # "TOTAL"
+  totalAmountIn: BigInt!
+  totalAmountOut: BigInt!
+  totalTrades: BigInt!
+  lastUpdated: BigInt!
+}
+

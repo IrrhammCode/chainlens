@@ -1,183 +1,284 @@
-ChainLens - Blockchain Analytics Platform
+# 🤖 ChainLens - Autonomous DeFi Trading Agent
 
-A comprehensive blockchain analytics platform built for the Monthly builder 2025. Features multi-chain wallet analysis, NFT gallery, analytics dashboard, and AI chat with Gemini AI integration using Tatum APIs.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Network](https://img.shields.io/badge/network-Ethereum%20Sepolia-grey)
+![Status](https://img.shields.io/badge/status-Live%20Demo-green)
+
+**ChainLens** is a next-generation autonomous DeFi trading agent built for the **MetaMask Developer Hackathon**. It leverages **ERC-7715 (Advanced Permissions)** to enable "Set & Forget" trading strategies without custodying user funds.
+
+> **The Vision:** Shift DeFi from *"User manually executing every trade"* to *"User setting policy, Agent executing strategy."*
+
+---
+
+## 🏆 Participating Tracks
+
+We are submitting **ChainLens** for the following MetaMask Developer Hackathon tracks:
+
+1.  **✨ Best Integration - Existing Project**
+    - Integrated ERC-7715 Advanced Permissions into the existing **ChainLens** analytics platform (built for Monthly Builder 2025) to transform it from a passive tracker to an active autonomous agent.
+2.  **🎨 Most Creative Use of Advanced Permissions**
+    - Built a fully autonomous execution engine that handles complex strategies (DCA, Grid, Limit) purely through permission delegation.
+3.  **⚡ Best Use of Envio**
+    - Integrated HyperSync for real-time multi-chain portfolio tracking and instant event indexing.
+3.  **💬 Best Feedback**
+    - Provided detailed technical feedback on Smart Accounts Kit documentation and DX (see Feedback section).
+4.  **📱 Best Social Media Presence on X**
+    - Documented the entire build journey and UX transformation (see Social Media section).
+
+---
 
 ## 🚀 Features
 
-### Core Features
-- **Multi-Chain Wallet Analysis** - Check balances across 6 chains
-- **DeFi Portfolio Tracking** - Comprehensive portfolio analysis with risk assessment
-- **NFT Gallery** - Multi-chain NFT collection tracking
-- **Real-time Analytics** - Live blockchain data and insights
-- **AI Chat Assistant** - Intelligent blockchain analysis with Gemini AI
+### Core Trading Strategies
+- **DCA (Dollar Cost Averaging)** - Automated periodic purchases with configurable budget and frequency
+- **Limit Orders** - Execute trades only when price hits your target (real-time price from CoinGecko)
+- **Grid Trading** - Place multiple orders at calculated grid levels for range-bound markets
 
-### Supported Blockchains
-- **Ethereum (ETH)** - Mainnet
-- **Polygon (MATIC)** - Layer 2
-- **BNB Smart Chain (BNB)** - Binance Chain
-- **Arbitrum (ETH)** - Layer 2
-- **Base (ETH)** - Coinbase Layer 2
-- **Optimism (ETH)** - Layer 2
+### Autonomous Execution
+- **ERC-7715 Permissions** - One-time approval for unlimited authorized transactions
+- **Non-Custodial** - Funds never leave your wallet, agent only has execution permission
+- **Real-Time Monitoring** - Agent runs 24/7, monitoring markets and executing strategies
+- **Multi-Strategy Support** - Switch between DCA, Limit Orders, and Grid Trading seamlessly
+
+### Real-Time Analytics
+- **Envio HyperSync Integration** - Lightning-fast multi-chain event indexing
+- **Cross-Chain Portfolio** - Track assets across Sepolia, Arbitrum, and Base
+- **Live Activity Feed** - Real-time transaction history and whale detection alerts
+- **Transaction History** - View all agent executions with Etherscan verification
+
+---
 
 ## 🛠️ Installation
 
 ### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Tatum API Key (Get from `https://tatum.io/`)
-- Gemini API Key (Get from Google AI Studio `https://aistudio.google.com/app/apikey`)
-- (Optional) Telegram Bot Token (Get from `@BotFather`)
+- **Node.js 18+**
+- **MetaMask Flask** (Required for ERC-7715 support)
+- **Sepolia ETH** (For agent wallet gas fees)
 
 ### Quick Start
 
-1. **Clone the repository**
 ```bash
+# Clone and install
 git clone <repository-url>
 cd chainlens
 npm install
-```
 
-2. **Set up environment variables (.env)**
-```env
-# Required
-TATUM_API_KEY=your_tatum_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
-PORT=3000
+# Configure environment
+cp .env.example .env
+# Edit .env and add your keys
 
-# Telegram (optional but recommended)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-WEB_SERVER_URL=http://localhost:3000
-```
-
-3. **Start the server**
-```bash
-# Development
-npm run dev
-
-# Production/simple
+# Start server
 npm start
 ```
 
-4. **Open your browser**
-```
-http://localhost:3000
-```
-
-## 🤖 AI Chat (Frontend)
-
-You can chat with the AI in the web UI (AI Assistant tab). Supported commands (English):
-
-1) "Check wallet 0x123... on Ethereum"
-2) "Check wallet 0x123... across all chains"
-3) "Analyze portfolio 0x123... on Polygon"
-4) "Analyze portfolio 0x123... multi-chain"
-5) "Show gas price on Ethereum"
-6) "List supported chains"
-7) "Show system status"
-8) "Show MCP status"
-9) "Restart MCP server"
-10) "Force fallback mode"
-
-Notes:
-- The server pre-fetches on-chain context (native balances + token counts per chain) and grounds Gemini responses.
-- Gas price is fetched directly via Tatum RPC and returned even without Gemini.
-
-## 📱 Telegram Bot
-
-Run the Telegram bot (requires `TELEGRAM_BOT_TOKEN` in `.env`):
-```bash
-# Start only the bot
-npm run start:bot
-
-# Start web server + bot together
-npm run start:both
-```
-
-Supported Telegram commands:
-- `/start` — Welcome + web link
-- `/help` — List all commands
-- `/status` — System status
-- `/chains` — Supported chains
-- `/gas` — Gas prices (Ethereum)
-- `/analyze <0x...>` — Wallet analysis (single chain)
-- `/analyze_multi <0x...>` — Wallet analysis (multi-chain)
-- `/portfolio <0x...>` — Portfolio analysis (single chain)
-- `/portfolio_multi <0x...>` — Portfolio analysis (multi-chain)
-- `/nft <0x...>` — NFT analysis (single chain)
-- `/nft_multi <0x...>` — NFT analysis (multi-chain)
-- `/chat <your question>` — AI chat
-
-Configuration:
-- Set `WEB_SERVER_URL` if your web server runs on a different host or port (defaults to `http://localhost:3000`).
-
-## 🔧 Configuration
+Server runs on `http://localhost:3000`
 
 ### Environment Variables
+
+Create `.env` file based on `.env.example`:
+
 ```env
+# REQUIRED API KEYS
 TATUM_API_KEY=your_tatum_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# AGENT RELAYER (Required for Real Execution)
+# Private key for the backend to execute trades on Sepolia
+AGENT_PRIVATE_KEY=0xYOUR_AGENT_PRIVATE_KEY
+
+# ENVIO HYPERSYNC (Required for Agent)
+# Leave empty to use Public Sepolia Endpoint
+ENVIO_API_TOKEN=
+
+# SERVER CONFIGURATION
 PORT=3000
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+# Optional: Telegram Bot
+TELEGRAM_BOT_TOKEN=
 WEB_SERVER_URL=http://localhost:3000
 ```
 
-### API Endpoints
-- `GET /` — Main web interface
-- `POST /api/chat` — AI chat endpoint
-- `GET /api/status` — System status
-- `GET /api/chains` — Supported chains
-- `GET /api/gas/:chain` — Gas price by chain (e.g., `ethereum`)
-- `POST /api/mcp-restart` — Restart Gemini MCP server
-- `POST /api/force-fallback` — Force fallback mode
-- `POST /api/test-multichain` — Test multi-chain (wallet/portfolio/nft)
+---
 
-## 📊 Architecture
+## 🎮 Usage
 
-### Backend
-- **Express.js** - Web server
-- **Tatum APIs** - Blockchain data source
-- **Gemini AI** - Natural-language responses grounded with on-chain context
-- **Fallback System** - Enhanced multi-chain analysis
+### 1. Connect Wallet
+- Open `http://localhost:3000` in browser with MetaMask Flask
+- Connect your Sepolia wallet
+- System scans your portfolio across multiple chains
 
-### Frontend
-- **Vanilla JavaScript** - Lightweight and fast
-- **Responsive Design** - Mobile-first approach
-- **Real-time Updates** - Live data refresh
+### 2. Configure Strategy
 
-### AI System
-- **Gemini AI** - Advanced AI analysis powered by Google's Gemini
-- **Fallback System** - Multi-chain analysis when Gemini unavailable
-- **Context Detection** - Smart query understanding
-- **Multi-chain Support** - Comprehensive blockchain analysis
+**DCA Configuration:**
+- Set daily budget (e.g., $10)
+- Set frequency (Every Hour / 4 Hours / Daily / Weekly)
+- Click "Activate Agent"
 
-## 🔍 Troubleshooting
+**Limit Order Configuration:**
+- Set target ETH price (e.g., $3500)
+- Set order amount (e.g., $100)
+- Click "Activate Agent"
 
-1. **Gemini AI Not Starting**
-   - Check if `GEMINI_API_KEY` is valid
-   - Verify network connectivity
-   - System will automatically use fallback mode
+**Grid Trading Configuration:**
+- Set price range (Min: $3200, Max: $3600)
+- Set grid levels (3-20 levels)
+- Set amount per order (e.g., $50)
+- Click "Activate Agent"
 
-2. **API Key Issues**
-   - Test with: `GET /api/test-current-key`
-   - Get new key from `https://tatum.io/`
+### 3. Grant Permission
+- MetaMask Flask popup appears
+- Review permission details (amount, duration, target token)
+- Sign once to authorize agent
 
-3. **Port Already in Use**
-   - Change `PORT` in `.env`
-
-## 🚀 Deployment
-
-### PM2 (example)
-```bash
-npm install -g pm2
-pm2 start server-simple.js --name chainlens
-pm2 save
-pm2 startup
-```
-
-## 📄 License
-
-MIT License - see LICENSE file for details
+### 4. Monitor Execution
+- Agent executes automatically based on strategy
+- View real-time logs in console
+- Check transaction history table
+- Verify on Etherscan via provided links
 
 ---
 
-Built with ❤️ for the Monthly Builder 2025
+## 📊 Architecture
+
+### Technology Stack
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Permissions** | ERC-7715 via Smart Accounts Kit | Delegated execution rights |
+| **Frontend** | Vanilla JS + ES Modules | Lightweight, fast UI |
+| **Backend** | Node.js + Express | Agent orchestration |
+| **Blockchain** | Viem + Sepolia | On-chain interactions |
+| **Indexing** | Envio HyperSync | Multi-chain event data |
+| **Pricing** | CoinGecko API | Real-time ETH/USD price |
+
+### How It Works
+
+```
+User → Grants Permission (ERC-7715)
+       ↓
+Backend → Stores Permission Context
+       ↓
+Agent → Monitors Market Conditions
+       ↓
+Agent → Executes Trade (Using Delegated Key)
+       ↓
+User → Receives Notification + Transaction Proof
+```
+
+---
+
+## 🔐 Advanced Permissions Usage
+
+This project leverages **ERC-7715 (Advanced Permissions)** via the MetaMask Smart Accounts Kit to enable autonomous agent operations without custodying user funds.
+
+### Code Usage Links
+
+#### Requesting Advanced Permissions
+📍 **Frontend Permission Request:**
+- **File:** [`public/app.js`](public/app.js#L587-L607)
+- **Lines:** 587-607
+- **Description:** Uses `requestExecutionPermissions()` from the Smart Accounts Kit to request periodic token spending permissions with granular caveats (amount limits, time windows, justification).
+
+#### Redeeming/Using Advanced Permissions
+📍 **Backend Permission Redemption:**
+- **File:** [`server-simple.js`](server-simple.js#L1033-L1050)
+- **Lines:** 1033-1050  
+- **Description:** Agent wallet uses the granted session key to execute transactions on behalf of the user. The permission context is validated server-side before each execution.
+
+📍 **Permission Storage & Validation:**
+- **File:** [`server-simple.js`](server-simple.js#L1004-L1024)
+- **Lines:** 1004-1024
+- **Description:** Agent registration endpoint stores the granted permission context in an in-memory map, which is later used to validate execution requests.
+
+### How It Works
+1. **User grants permission** once via MetaMask popup (configured with daily budget, duration, target token)
+2. **Backend stores** the permission context (cryptographic proof)
+3. **Agent executes** trades autonomously within the granted limits
+4. **User retains custody** - funds never leave their wallet, agent only has execution permission
+
+---
+
+## 📊 Envio Usage
+
+We integrated **Envio HyperSync** for real-time blockchain event indexing and portfolio analytics.
+
+### Code Usage Links
+
+#### HyperSync Client Initialization
+📍 **Service Setup:**
+- **File:** [`services/hypersync.js`](services/hypersync.js#L1-L50)
+- **Lines:** 1-50
+- **Description:** Configures HyperSync client for Ethereum Sepolia, Arbitrum Sepolia, and Base Sepolia chains with event indexing for portfolio tracking.
+
+#### Portfolio Data Fetching
+📍 **Multi-Chain Portfolio Scan:**
+- **File:** [`services/hypersync.js`](services/hypersync.js#L60-L150)
+- **Lines:** 60-150
+- **Description:** Uses HyperSync to query `Transfer` and `Swap` events across multiple chains for comprehensive portfolio analysis.
+
+#### Real-Time Trade Monitoring
+📍 **Live Event Streaming:**
+- **File:** [`server-simple.js`](server-simple.js#L200-L350)
+- **Lines:** 200-350
+- **Description:** HyperSync endpoint provides real-time transaction history for the dashboard's live activity feed.
+
+### How We Use Envio
+
+**ChainLens** uses Envio HyperSync for:
+
+1. **Cross-Chain Portfolio Tracking:** Scans user wallet across Sepolia, Arbitrum Sepolia, and Base Sepolia
+2. **Real-Time Activity Feed:** Streams live blockchain events to dashboard
+3. **Historical Analytics:** Query past trades for strategy backtesting
+
+**Key Benefits:**
+- ⚡ 10-100x faster than traditional RPC indexing
+- 🌐 Multi-chain support with single API  
+- 📊 Rich event data with decoded parameters
+- 🔄 Real-time updates for live dashboard
+
+---
+
+## 💬 Feedback
+
+### Hackathon Feedback Provided
+
+During development, we identified several areas where MetaMask Advanced Permissions and the Smart Accounts Kit could be improved:
+
+#### 1. Documentation Gaps
+- **Issue:** Limited examples for `erc20-token-periodic` permission type
+- **Impact:** Required reverse-engineering SDK source code to understand caveat structure
+- **Suggestion:** Add comprehensive examples for each permission type in docs
+
+#### 2. Permission Context Validation
+- **Issue:** No clear documentation on how to validate/verify permission context server-side
+- **Impact:** Had to implement custom validation logic, potential security risks
+- **Suggestion:** Provide utility functions or best practices for backend validation
+
+#### 3. Error Messages
+- **Issue:** Generic error messages when permission request fails
+- **Impact:** Difficult to debug user-facing issues
+- **Suggestion:** More descriptive error codes and user-friendly messages
+
+#### 4. Testnet Support
+- **Issue:** Some features work inconsistently on Sepolia vs Mainnet
+- **Impact:** Required extensive fallback logic for demo reliability
+- **Suggestion:** Dedicated testnet documentation and test token faucets
+
+### Feature Requests
+- **Permission Templates:** Pre-configured permission sets for common DeFi use cases
+- **Dashboard Integration:** Built-in UI component for viewing active permissions
+- **Revocation API:** Programmatic way to revoke permissions from frontend
+
+---
+
+## 📱 Social Media
+
+### Project Journey on X (Twitter)
+
+Follow our project journey and see how MetaMask Advanced Permissions transformed the DeFi user experience.
+
+🐦 **Twitter Thread:** [ChainLens Development Journey](https://x.com/BabyBoomWeb3/status/2007059992822886649?s=20)
+
+
+
+---
+
+Built with ❤️ for the Monthly Builder 2025 & MetaMask Developer Hackathon

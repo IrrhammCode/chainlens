@@ -1,292 +1,213 @@
 <!DOCTYPE html>
-<!--
-    Tatum ChainLens - Main Web Interface
-    Built for Tatum MCP Hackathon 2025
-    
-    Features:
-    - Multi-wallet balance checking across 6+ blockchains
-    - DeFi portfolio tracking and analysis
-    - NFT gallery with collection insights
-    - Analytics dashboard with real-time data
-    - AI chat with MCP server integration
-    - Professional dark theme UI
-    - Mobile-responsive design
-    
-    @author Tatum ChainLens Team
-    @version 1.0.0
-    @license MIT
--->
-<html lang="en">
+<html lang="en" class="scroll-smooth">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> ChainLens - Blockchain Analytics Platform</title>
-    
-    <!-- Stylesheets -->
-    <link rel="stylesheet" href="style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <title>ChainLens | The Autonomous Blockchain Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                    colors: {
+                        brand: { 500: '#8B5CF6', 600: '#7C3AED' },
+                        dark: { 900: '#0B0F19', 800: '#141B2D' }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        glow: { 'from': { boxShadow: '0 0 10px #8B5CF6' }, 'to': { boxShadow: '0 0 20px #8B5CF6, 0 0 40px #7C3AED' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0B0F19;
+            background-image: radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%), radial-gradient(circle at 85% 30%, rgba(236, 72, 153, 0.15), transparent 25%);
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .glass-header {
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .hero-text-gradient {
+            background: linear-gradient(135deg, #FFF 0%, #A78BFA 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
 </head>
-<body>
-    <div class="container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <i class="fas fa-eye"></i>
-                <h1>ChainLens</h1>
-                <span class="badge">Blockchain Analytics Platform</span>
-            </div>
-            <div class="status">
-                <div class="status-item">
-                    <i class="fas fa-circle status-dot"></i>
-                    <span id="connectionStatus">API Connected</span>
-                </div>
-                <div class="status-item">
-                    <i class="fas fa-robot" id="mcpIcon"></i>
-                    <span id="mcpStatus">MCP: Checking...</span>
-                </div>
-                <div class="status-item api-key-section">
-                    <i class="fas fa-key"></i>
-                    <span id="apiKeyDisplay">API Key: Not Set</span>
-                    <button id="changeApiKey" class="btn-change-key">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </div>
-            </div>
-        </header>
 
-        <!-- Navigation -->
-        <nav class="nav">
-            <button class="nav-btn active" data-tab="wallet">
-                <i class="fas fa-wallet"></i>
-                Multi-Wallet Checker
+<body class="antialiased">
+
+    <!-- Navbar -->
+    <nav class="glass-header fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                    <i class="fas fa-cube text-white text-lg"></i>
+                </div>
+                <span class="font-bold text-xl tracking-tight">ChainLens</span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#agent" class="hover:text-white transition">Autonomous Agent</a>
+                <a href="#integration" class="hover:text-white transition">API</a>
+            </div>
+
+            <!-- Connect Button (Navbar) -->
+            <button id="connectWalletBtn"
+                class="bg-white/10 hover:bg-white/20 border border-white/10 text-white px-6 py-2.5 rounded-full text-sm font-semibold backdrop-blur-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group">
+                <i class="fas fa-wallet group-hover:text-violet-400 transition-colors"></i>
+                <span>Connect Wallet</span>
             </button>
-            <button class="nav-btn" data-tab="defi">
-                <i class="fas fa-chart-line"></i>
-                DeFi Portfolio
-            </button>
-            <button class="nav-btn" data-tab="ai">
-                <i class="fas fa-robot"></i>
-                AI Assistant
-            </button>
-            <button class="nav-btn" data-tab="nft">
-                <i class="fas fa-image"></i>
-                NFT Gallery
-            </button>
-            <button class="nav-btn" data-tab="analytics">
-                <i class="fas fa-chart-bar"></i>
-                Analytics
-            </button>
-        </nav>
+        </div>
+    </nav>
 
-        <!-- Main Content -->
-        <main class="main">
-            <!-- Multi-Wallet Checker Tab -->
-            <div class="tab-content active" id="wallet">
-                <div class="section">
-                    <h2><i class="fas fa-wallet"></i> Multi-Wallet Checker</h2>
-                    <p>Check balances across multiple blockchains simultaneously</p>
-                    
-                    <div class="wallet-input">
-                        <input type="text" id="walletAddress" placeholder="Enter wallet address (0x...)" />
-                        <button id="checkWallet" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Check Wallets
-                        </button>
-                    </div>
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10 text-center">
 
-                    <div class="chains-grid" id="chainsGrid">
-                        <!-- Chains will be loaded dynamically -->
-                    </div>
-
-                    <div class="wallet-results" id="walletResults">
-                        <!-- Results will be displayed here -->
-                    </div>
-                </div>
+            <div
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-sm font-medium mb-8 animate-fade-in-up">
+                <span class="w-2 h-2 rounded-full bg-violet-400 animate-pulse"></span>
+                Now with Autonomous Agent (ERC-7715)
             </div>
 
-            <!-- DeFi Portfolio Tab -->
-            <div class="tab-content" id="defi">
-                <div class="section">
-                    <h2><i class="fas fa-chart-line"></i> DeFi Portfolio Tracker</h2>
-                    <p>Track your DeFi positions, yield farming, and portfolio performance across chains</p>
-                    
-                    <div class="portfolio-controls">
-                        <div class="input-group">
-                            <input type="text" id="portfolioAddress" placeholder="Enter wallet address (0x...)" />
-                            <button id="analyzePortfolio" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Analyze Portfolio
-                            </button>
-                        </div>
-                        <div class="portfolio-filters">
-                            <button class="filter-btn active" data-filter="all">All Assets</button>
-                            <button class="filter-btn" data-filter="tokens">Tokens</button>
-                            <button class="filter-btn" data-filter="nfts">NFTs</button>
-                            <button class="filter-btn" data-filter="defi">DeFi</button>
-                        </div>
-                    </div>
+            <h1 class="text-5xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
+                <span class="block">See the Future.</span>
+                <span class="hero-text-gradient">Automate the Present.</span>
+            </h1>
 
-                    <div class="portfolio-summary" id="portfolioSummary">
-                        <!-- Portfolio summary cards -->
-                    </div>
+            <p class="text-lg lg:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+                The first multi-chain analytics platform that doesn't just <em>show</em> you data—it acts on it.
+                Powered by Gemini AI and MetaMask Advanced Permissions.
+            </p>
 
-                    <div class="portfolio-details" id="portfolioDetails">
-                        <!-- Detailed portfolio breakdown -->
-                    </div>
-
-                    <div class="yield-opportunities" id="yieldOpportunities">
-                        <!-- Yield farming opportunities -->
-                    </div>
-                </div>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button id="heroConnectBtn"
+                    class="w-full sm:w-auto px-8 py-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-bold text-lg shadow-xl shadow-violet-600/20 transition-all hover:translate-y-[-2px] flex items-center justify-center gap-3">
+                    <i class="fas fa-bolt"></i> Connect to Launch
+                </button>
+                <a href="#demo"
+                    class="w-full sm:w-auto px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-play text-violet-400"></i> Watch Demo
+                </a>
             </div>
 
-            <!-- AI Assistant Tab -->
-            <div class="tab-content" id="ai">
-                <div class="section">
-                    <h2><i class="fas fa-robot"></i> AI Blockchain Assistant</h2>
-                    <p>Chat with AI powered by Tatum & Gemini MCP server</p>
-                    
-                    <div class="chat-container">
-                        <div class="chat-messages" id="chatMessages">
-                            <div class="message ai-message">
-                                <div class="message-content">
-                                    <i class="fas fa-robot"></i>
-                                    <p>Hello! I'm your Gemini MCP AI assistant. I can help you with blockchain queries, gas optimization, wallet analysis, and more. What would you like to know?</p>
-                                </div>
-                            </div>
-                            <div class="message ai-message">
-                                <div class="message-content">
-                                    <i class="fas fa-lightbulb"></i>
-                                    <p><strong>Commands you can use:</strong><br>
-                                    1) "Check wallet 0x123... on Ethereum"<br>
-                                    2) "Check wallet 0x123... across all chains"<br>
-                                    3) "Analyze portfolio 0x123... on Polygon"<br>
-                                    4) "Analyze portfolio 0x123... multi-chain"<br>
-                                    5) "Show gas price on Ethereum"<br>
-                                    6) "List supported chains"<br>
-                                    7) "Show system status"<br>
-                                    8) "Show MCP status"<br>
-                                    9) "Restart MCP server"<br>
-                                    10) "Force fallback mode"</p>
-                                    <p style="margin-top:8px;"><strong>What I can do now (MCP):</strong><br>
-                                    • Fetch real on-chain data (native balances + token counts)<br>
-                                    • Summarize per-chain holdings (ETH, Polygon, BSC, Arbitrum, Base, Optimism)<br>
-                                    • Portfolio summaries (counts-only, grounded by fetched data)<br>
-                                    • Gas price via RPC<br>
-                                    • Health/status endpoints and restart/fallback controls<br>
-                                    • Natural-language answers (Gemini) grounded by provided context
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="chat-input">
-                            <input type="text" id="chatInput" placeholder="Ask me about blockchain, gas fees, wallets..." />
-                            <button id="sendMessage" class="btn btn-primary">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
+            <!-- Stats/Trust -->
+            <div class="mt-20 grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-white/5 pt-12">
+                <div>
+                    <div class="text-3xl font-bold text-white mb-1">10+</div>
+                    <div class="text-sm text-gray-500 uppercase tracking-widest">Chains</div>
+                </div>
+                <div>
+                    <div class="text-3xl font-bold text-white mb-1">
+                        < 1s</div>
+                            <div class="text-sm text-gray-500 uppercase tracking-widest">Latency</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">AI</div>
+                        <div class="text-sm text-gray-500 uppercase tracking-widest">Powered</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">24/7</div>
+                        <div class="text-sm text-gray-500 uppercase tracking-widest">Uptime</div>
                     </div>
                 </div>
+
             </div>
 
-            <!-- NFT Gallery Tab -->
-            <div class="tab-content" id="nft">
-                <div class="section">
-                    <h2><i class="fas fa-image"></i> NFT Gallery</h2>
-                    <p>Discover, analyze, and track NFTs across multiple blockchains</p>
-                    
-                    <div class="nft-controls">
-                        <div class="input-group">
-                            <input type="text" id="nftAddress" placeholder="Enter wallet address (0x...)" />
-                            <button id="loadNFTs" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Load NFTs
-                            </button>
-                        </div>
-                        <div class="nft-filters">
-                            <button class="filter-btn active" data-filter="all">All NFTs</button>
-                            <button class="filter-btn" data-filter="ethereum">Ethereum</button>
-                            <button class="filter-btn" data-filter="polygon">Polygon</button>
-                            <button class="filter-btn" data-filter="bsc">BSC</button>
-                        </div>
-                    </div>
+            <!-- Decorative Background Elements -->
+            <div
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-600/20 rounded-full blur-[120px] -z-10 opacity-30">
+            </div>
+    </section>
 
-                    <div class="nft-stats" id="nftStats">
-                        <!-- NFT statistics -->
-                    </div>
-
-                    <div class="nft-grid" id="nftGrid">
-                        <!-- NFT collection will be displayed here -->
-                    </div>
-                </div>
+    <!-- Features Grid -->
+    <section id="features" class="py-20 bg-dark-800/50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl lg:text-4xl font-bold mb-4">Intelligence meets Action</h2>
+                <p class="text-gray-400 max-w-2xl mx-auto">Why settle for a passive dashboard? ChainLens empowers you to
+                    control your portfolio autonomously.</p>
             </div>
 
-            <!-- Analytics Tab -->
-            <div class="tab-content" id="analytics">
-                <div class="section">
-                    <h2><i class="fas fa-chart-bar"></i> Blockchain Analytics</h2>
-                    <p>Real-time analytics and insights across multiple blockchains</p>
-                    
-                    <div class="analytics-dashboard">
-                        <div id="analyticsContent">
-                            <!-- Real analytics data will be loaded here -->
-                            <div class="loading">
-                                <i class="fas fa-spinner fa-spin"></i>
-                                Loading real-time analytics data...
-                            </div>
-                        </div>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="feature-card p-8 rounded-3xl relative overflow-hidden group">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-globe text-2xl"></i>
                     </div>
+                    <h3 class="text-xl font-bold mb-3">Multi-Chain Unified</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">View balances across Ethereum, Polygon, BSC,
+                        Arbitrum, and more in a single, unified view. No more network switching.</p>
                 </div>
-            </div>
-        </main>
 
-        <!-- API Key Modal -->
-        <div id="apiKeyModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-key"></i> Set Tatum API Key</h3>
-                    <button id="closeModal" class="close-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Enter your Tatum API key to access real blockchain data:</p>
-                    <div class="input-group">
-                        <input type="password" id="apiKeyInput" placeholder="Enter your Tatum API key (t-...)" />
-                        <button id="toggleVisibility" class="btn btn-secondary">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                <!-- Card 2 -->
+                <div class="feature-card p-8 rounded-3xl relative overflow-hidden group border-violet-500/30">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i class="fas fa-robot text-8xl text-violet-500"></i>
                     </div>
-                    <div class="api-key-info">
-                        <p><strong>How to get your API key:</strong></p>
-                        <ol>
-                            <li>Visit <a href="https://tatum.io" target="_blank">tatum.io</a></li>
-                            <li>Sign up for a free account</li>
-                            <li>Go to API Keys section</li>
-                            <li>Copy your API key (starts with 't-')</li>
-                        </ol>
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center text-violet-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-brain text-2xl"></i>
                     </div>
+                    <h3 class="text-xl font-bold mb-3 text-violet-100">AI Agent (New)</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Powered by Gemini & ERC-7715. Grant a minimal
+                        permission, and let the Agent optimize your portfolio while you sleep.</p>
                 </div>
-                <div class="modal-footer">
-                    <button id="saveApiKey" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Save API Key
-                    </button>
-                    <button id="testApiKey" class="btn btn-secondary">
-                        <i class="fas fa-test-tube"></i> Test Connection
-                    </button>
+
+                <!-- Card 3 -->
+                <div class="feature-card p-8 rounded-3xl relative overflow-hidden group">
+                    <div
+                        class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fas fa-bolt text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3">Instant Fallback</h3>
+                    <p class="text-gray-400 leading-relaxed text-sm">Robust infrastructure that never fails. If primary
+                        RPCs go down, our intelligent fallback system ensures zero downtime.</p>
                 </div>
             </div>
         </div>
+    </section>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Built for Monthly Builder | Powered by Tatum APIs & Gemini MCP Server</p>
-            <div class="social">
-                <a href="#" class="social-link"><i class="fab fa-github"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
-            </div>
-        </footer>
-    </div>
+    <!-- Footer -->
+    <footer class="py-12 border-t border-white/5 text-center text-gray-500 text-sm">
+        <p>&copy; 2025 ChainLens. Built for the Future of DeFi.</p>
+    </footer>
 
-    <script src="app.js"></script>
+    <script src="landing.js"></script>
 </body>
+
 </html>
